@@ -63,7 +63,12 @@ export default function ProductsPage() {
       .eq('supplier_id', supplier.id)
       .order('created_at', { ascending: false })
 
-    setProducts(data || [])
+    // Transform the data to match the Product interface (category comes as array from join)
+    const products = (data || []).map((item: any) => ({
+      ...item,
+      category: Array.isArray(item.category) ? item.category[0] || null : item.category
+    }))
+    setProducts(products)
     setLoading(false)
   }
 
