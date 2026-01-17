@@ -16,7 +16,24 @@ const translations = {
   inactive: { en: 'Inactive', fr: 'Inactif', ht: 'Inaktif', es: 'Inactivo' },
   inStock: { en: 'In Stock', fr: 'En stock', ht: 'Nan stòk', es: 'En stock' },
   outOfStock: { en: 'Out of Stock', fr: 'Rupture de stock', ht: 'Pa nan stòk', es: 'Agotado' },
+  lowStock: { en: 'Low Stock', fr: 'Stock faible', ht: 'Stòk ba', es: 'Stock bajo' },
   edit: { en: 'Edit', fr: 'Modifier', ht: 'Modifye', es: 'Editar' },
+  totalProducts: { en: 'Total Products', fr: 'Total produits', ht: 'Total pwodui', es: 'Total productos' },
+  categories: { en: 'Categories', fr: 'Catégories', ht: 'Kategori', es: 'Categorías' },
+  allCategories: { en: 'All Categories', fr: 'Toutes les catégories', ht: 'Tout kategori', es: 'Todas las categorías' },
+  allStatus: { en: 'All Status', fr: 'Tous les statuts', ht: 'Tout estati', es: 'Todos los estados' },
+  allStock: { en: 'All Stock', fr: 'Tout le stock', ht: 'Tout stòk', es: 'Todo el stock' },
+  gridView: { en: 'Grid', fr: 'Grille', ht: 'Griy', es: 'Cuadrícula' },
+  listView: { en: 'List', fr: 'Liste', ht: 'Lis', es: 'Lista' },
+  needsRestock: { en: 'Needs restock', fr: 'Réapprovisionnement', ht: 'Bezwen restoke', es: 'Necesita reabastecimiento' },
+  ofTotal: { en: 'of total', fr: 'du total', ht: 'nan total', es: 'del total' },
+  showing: { en: 'Showing', fr: 'Affichage', ht: 'Montre', es: 'Mostrando' },
+  of: { en: 'of', fr: 'sur', ht: 'nan', es: 'de' },
+  product: { en: 'product', fr: 'produit', ht: 'pwodui', es: 'producto' },
+  stock: { en: 'Stock', fr: 'Stock', ht: 'Stòk', es: 'Stock' },
+  price: { en: 'Price', fr: 'Prix', ht: 'Pri', es: 'Precio' },
+  status: { en: 'Status', fr: 'Statut', ht: 'Estati', es: 'Estado' },
+  actions: { en: 'Actions', fr: 'Actions', ht: 'Aksyon', es: 'Acciones' },
 }
 
 interface Product {
@@ -31,10 +48,16 @@ interface Product {
   category: { name: string } | null
 }
 
+const LOW_STOCK_THRESHOLD = 10
+
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [categoryFilter, setCategoryFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [stockFilter, setStockFilter] = useState('all')
   const { t } = useLanguage()
 
   useEffect(() => {
@@ -56,7 +79,6 @@ export default function ProductsPage() {
         .eq('supplier_id', supplierId)
         .order('created_at', { ascending: false })
 
-      // Transform the data to match the Product interface (category comes as array from join)
       const products = (data || []).map((item: any) => ({
         ...item,
         category: Array.isArray(item.category) ? item.category[0] || null : item.category
@@ -69,10 +91,38 @@ export default function ProductsPage() {
     }
   }
 
-  const filteredProducts = products.filter(p =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.sku?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  // Calculate stats
+  const totalProducts = products.length
+  const categories = [...new Set(products.map(p => p.category?.name).filter(Boolean))]
+  const inStockCount = products.filter(p => p.in_stock).length
+  const lowStockCount = products.filter(p => p.stock_quantity !== null && p.stock_quantity > 0 && p.stock_quantity <= LOW_STOCK_THRESHOLD).length
+  const outOfStockCount = products.filter(p => !p.in_stock || p.stock_quantity === 0).length
+
+  // Filter products
+  const filteredProducts = products.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.sku?.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesCategory = categoryFilter === 'all' || p.category?.name === categoryFilter
+    const matchesStatus = statusFilter === 'all' ||
+      (statusFilter === 'active' && p.is_active) ||
+      (statusFilter === 'inactive' && !p.is_active)
+    const matchesStock = stockFilter === 'all' ||
+      (stockFilter === 'inStock' && p.in_stock && (p.stock_quantity === null || p.stock_quantity > LOW_STOCK_THRESHOLD)) ||
+      (stockFilter === 'lowStock' && p.stock_quantity !== null && p.stock_quantity > 0 && p.stock_quantity <= LOW_STOCK_THRESHOLD) ||
+      (stockFilter === 'outOfStock' && (!p.in_stock || p.stock_quantity === 0))
+
+    return matchesSearch && matchesCategory && matchesStatus && matchesStock
+  })
+
+  const getStockStatus = (product: Product) => {
+    if (!product.in_stock || product.stock_quantity === 0) {
+      return { label: t('outOfStock', translations.outOfStock), color: 'bg-red-100 text-red-800', dot: 'bg-red-500' }
+    }
+    if (product.stock_quantity !== null && product.stock_quantity <= LOW_STOCK_THRESHOLD) {
+      return { label: t('lowStock', translations.lowStock), color: 'bg-yellow-100 text-yellow-800', dot: 'bg-yellow-500' }
+    }
+    return { label: t('inStock', translations.inStock), color: 'bg-green-100 text-green-800', dot: 'bg-green-500' }
+  }
 
   if (loading) {
     return (
@@ -83,12 +133,13 @@ export default function ProductsPage() {
   }
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-4 md:p-6 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">{t('products', translations.products)}</h1>
         <Link
           href="/products/new"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -97,17 +148,168 @@ export default function ProductsPage() {
         </Link>
       </div>
 
-      {/* Search */}
-      <div className="mb-6">
-        <input
-          type="text"
-          placeholder={t('search', translations.search)}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full max-w-md px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-        />
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        {/* Total Products */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+              <svg className="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{totalProducts}</p>
+              <p className="text-xs text-gray-500">{t('totalProducts', translations.totalProducts)}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Categories */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+              <svg className="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{categories.length}</p>
+              <p className="text-xs text-gray-500">{t('categories', translations.categories)}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* In Stock */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+              <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{inStockCount}</p>
+              <p className="text-xs text-gray-500">{t('inStock', translations.inStock)}</p>
+            </div>
+          </div>
+          {totalProducts > 0 && (
+            <p className="text-xs text-gray-400 mt-2">{Math.round((inStockCount / totalProducts) * 100)}% {t('ofTotal', translations.ofTotal)}</p>
+          )}
+        </div>
+
+        {/* Low Stock */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+              <svg className="w-5 h-5 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{lowStockCount + outOfStockCount}</p>
+              <p className="text-xs text-gray-500">{t('lowStock', translations.lowStock)}</p>
+            </div>
+          </div>
+          {(lowStockCount + outOfStockCount) > 0 && (
+            <p className="text-xs text-orange-600 mt-2">{t('needsRestock', translations.needsRestock)}</p>
+          )}
+        </div>
       </div>
 
+      {/* Filters & View Toggle */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6">
+        <div className="flex flex-col lg:flex-row gap-4">
+          {/* Search */}
+          <div className="flex-1">
+            <div className="relative">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                placeholder={t('search', translations.search)}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
+              />
+            </div>
+          </div>
+
+          {/* Filters */}
+          <div className="flex flex-wrap gap-3">
+            {/* Category Filter */}
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm bg-white"
+            >
+              <option value="all">{t('allCategories', translations.allCategories)}</option>
+              {categories.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+
+            {/* Status Filter */}
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm bg-white"
+            >
+              <option value="all">{t('allStatus', translations.allStatus)}</option>
+              <option value="active">{t('active', translations.active)}</option>
+              <option value="inactive">{t('inactive', translations.inactive)}</option>
+            </select>
+
+            {/* Stock Filter */}
+            <select
+              value={stockFilter}
+              onChange={(e) => setStockFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm bg-white"
+            >
+              <option value="all">{t('allStock', translations.allStock)}</option>
+              <option value="inStock">{t('inStock', translations.inStock)}</option>
+              <option value="lowStock">{t('lowStock', translations.lowStock)}</option>
+              <option value="outOfStock">{t('outOfStock', translations.outOfStock)}</option>
+            </select>
+
+            {/* View Toggle */}
+            <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`px-3 py-2 flex items-center gap-1 text-sm ${
+                  viewMode === 'grid' ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                </svg>
+                {t('gridView', translations.gridView)}
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`px-3 py-2 flex items-center gap-1 text-sm border-l border-gray-300 ${
+                  viewMode === 'list' ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                </svg>
+                {t('listView', translations.listView)}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Products Count */}
+      {filteredProducts.length > 0 && (
+        <p className="text-sm text-gray-500 mb-4">
+          {t('showing', translations.showing)} {filteredProducts.length} {t('of', translations.of)} {totalProducts} {t('products', translations.products).toLowerCase()}
+        </p>
+      )}
+
+      {/* Empty State */}
       {filteredProducts.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-xl border border-gray-100">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
@@ -127,70 +329,138 @@ export default function ProductsPage() {
             {t('addProduct', translations.addProduct)}
           </Link>
         </div>
-      ) : (
-        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filteredProducts.map((product) => (
-                <tr key={product.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
-                        {product.image_url ? (
-                          <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                        )}
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900">{product.name}</p>
-                        <p className="text-sm text-gray-500">{product.category?.name || '-'}</p>
-                      </div>
+      ) : viewMode === 'grid' ? (
+        /* Grid View */
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          {filteredProducts.map((product) => {
+            const stockStatus = getStockStatus(product)
+            return (
+              <div key={product.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+                {/* Product Image */}
+                <div className="aspect-square bg-gray-100 relative">
+                  {product.image_url ? (
+                    <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <svg className="w-12 h-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
                     </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">{product.sku || '-'}</td>
-                  <td className="px-6 py-4 text-sm font-medium text-gray-900">${product.price.toFixed(2)}</td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                      product.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {product.is_active ? t('active', translations.active) : t('inactive', translations.inactive)}
+                  )}
+                  {/* Status Badge */}
+                  {!product.is_active && (
+                    <span className="absolute top-2 left-2 px-2 py-0.5 bg-gray-800 text-white text-xs font-medium rounded">
+                      {t('inactive', translations.inactive)}
                     </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                      product.in_stock ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'
-                    }`}>
-                      {product.in_stock ? t('inStock', translations.inStock) : t('outOfStock', translations.outOfStock)}
+                  )}
+                </div>
+
+                {/* Product Info */}
+                <div className="p-3">
+                  <h3 className="font-medium text-gray-900 text-sm truncate">{product.name}</h3>
+                  <p className="text-xs text-gray-500 truncate">{product.sku || '-'}</p>
+
+                  <div className="mt-2 flex items-center justify-between">
+                    <p className="font-semibold text-gray-900">${product.price.toFixed(2)}</p>
+                    <div className="flex items-center gap-1">
+                      <span className={`w-2 h-2 rounded-full ${stockStatus.dot}`}></span>
+                      <span className="text-xs text-gray-500">
+                        {product.stock_quantity !== null ? product.stock_quantity : '-'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 flex items-center justify-between">
+                    <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${stockStatus.color}`}>
+                      {stockStatus.label}
                     </span>
-                    {product.stock_quantity !== null && (
-                      <span className="ml-2 text-sm text-gray-500">({product.stock_quantity})</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-right">
                     <Link
                       href={`/products/${product.id}`}
-                      className="text-primary-600 hover:text-primary-700 text-sm font-medium"
+                      className="text-primary-600 hover:text-primary-700 text-xs font-medium"
                     >
                       {t('edit', translations.edit)}
                     </Link>
-                  </td>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        /* List View */
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('product', translations.product)}</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('categories', translations.categories)}</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('price', translations.price)}</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('stock', translations.stock)}</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('status', translations.status)}</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">{t('actions', translations.actions)}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filteredProducts.map((product) => {
+                  const stockStatus = getStockStatus(product)
+                  return (
+                    <tr key={product.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
+                            {product.image_url ? (
+                              <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                            )}
+                          </div>
+                          <span className="font-medium text-gray-900 text-sm">{product.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500">{product.sku || '-'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-500">{product.category?.name || '-'}</td>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">${product.price.toFixed(2)}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full ${stockStatus.dot}`}></span>
+                          <span className="text-sm text-gray-700">
+                            {product.stock_quantity !== null ? product.stock_quantity : '-'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col gap-1">
+                          <span className={`inline-flex w-fit px-2 py-0.5 text-xs font-medium rounded-full ${
+                            product.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {product.is_active ? t('active', translations.active) : t('inactive', translations.inactive)}
+                          </span>
+                          <span className={`inline-flex w-fit px-2 py-0.5 text-xs font-medium rounded-full ${stockStatus.color}`}>
+                            {stockStatus.label}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Link
+                          href={`/products/${product.id}`}
+                          className="inline-flex items-center gap-1 text-primary-600 hover:text-primary-700 text-sm font-medium"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                          {t('edit', translations.edit)}
+                        </Link>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
