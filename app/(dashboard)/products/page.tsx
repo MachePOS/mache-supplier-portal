@@ -335,14 +335,14 @@ export default function ProductsPage() {
           {filteredProducts.map((product) => {
             const stockStatus = getStockStatus(product)
             return (
-              <div key={product.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
-                {/* Product Image */}
-                <div className="aspect-square bg-gray-100 relative">
+              <div key={product.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow flex flex-col h-full">
+                {/* Product Image - Fixed Height */}
+                <div className="h-40 bg-gray-100 relative flex-shrink-0">
                   {product.image_url ? (
                     <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      <svg className="w-12 h-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="w-10 h-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
                     </div>
@@ -355,31 +355,33 @@ export default function ProductsPage() {
                   )}
                 </div>
 
-                {/* Product Info */}
-                <div className="p-3">
-                  <h3 className="font-medium text-gray-900 text-sm truncate">{product.name}</h3>
+                {/* Product Info - Fixed Height */}
+                <div className="p-3 flex flex-col flex-1">
+                  <h3 className="font-medium text-gray-900 text-sm line-clamp-2 min-h-[2.5rem]">{product.name}</h3>
                   <p className="text-xs text-gray-500 truncate">{product.sku || '-'}</p>
 
-                  <div className="mt-2 flex items-center justify-between">
-                    <p className="font-semibold text-gray-900">${product.price.toFixed(2)}</p>
-                    <div className="flex items-center gap-1">
-                      <span className={`w-2 h-2 rounded-full ${stockStatus.dot}`}></span>
-                      <span className="text-xs text-gray-500">
-                        {product.stock_quantity !== null ? product.stock_quantity : '-'}
-                      </span>
+                  <div className="mt-auto pt-2">
+                    <div className="flex items-center justify-between">
+                      <p className="font-semibold text-gray-900">${product.price.toFixed(2)}</p>
+                      <div className="flex items-center gap-1">
+                        <span className={`w-2 h-2 rounded-full ${stockStatus.dot}`}></span>
+                        <span className="text-xs text-gray-500">
+                          {product.stock_quantity !== null ? product.stock_quantity : '-'}
+                        </span>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="mt-2 flex items-center justify-between">
-                    <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${stockStatus.color}`}>
-                      {stockStatus.label}
-                    </span>
-                    <Link
-                      href={`/products/${product.id}`}
-                      className="text-primary-600 hover:text-primary-700 text-xs font-medium"
-                    >
-                      {t('edit', translations.edit)}
-                    </Link>
+                    <div className="mt-2 flex items-center justify-between">
+                      <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${stockStatus.color}`}>
+                        {stockStatus.label}
+                      </span>
+                      <Link
+                        href={`/products/${product.id}`}
+                        className="text-primary-600 hover:text-primary-700 text-xs font-medium"
+                      >
+                        {t('edit', translations.edit)}
+                      </Link>
+                    </div>
                   </div>
                 </div>
               </div>
