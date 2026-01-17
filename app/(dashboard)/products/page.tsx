@@ -93,7 +93,7 @@ export default function ProductsPage() {
 
   // Calculate stats
   const totalProducts = products.length
-  const categories = [...new Set(products.map(p => p.category?.name).filter(Boolean))]
+  const categories = Array.from(new Set(products.map(p => p.category?.name).filter(Boolean))) as string[]
   const inStockCount = products.filter(p => p.in_stock).length
   const lowStockCount = products.filter(p => p.stock_quantity !== null && p.stock_quantity > 0 && p.stock_quantity <= LOW_STOCK_THRESHOLD).length
   const outOfStockCount = products.filter(p => !p.in_stock || p.stock_quantity === 0).length
