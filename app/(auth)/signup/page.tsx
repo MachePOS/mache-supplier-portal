@@ -77,11 +77,15 @@ export default function SupplierSignupPage() {
 
     const supabase = createClient()
 
+    // Get the current origin for redirect
+    const origin = window.location.origin
+
     // Create auth user
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: formData.email,
       password: formData.password,
       options: {
+        emailRedirectTo: `${origin}/auth/callback`,
         data: {
           name: formData.contactName,
           user_type: 'supplier',
