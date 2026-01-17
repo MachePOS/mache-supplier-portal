@@ -34,6 +34,7 @@ interface Order {
   fulfillment_type: string
   created_at: string
   delivery_city: string | null
+  message_count?: number
 }
 
 const statusColors: Record<string, string> = {
@@ -72,7 +73,30 @@ export default function OrdersPage() {
         .eq('supplier_id', supplierId)
         .order('created_at', { ascending: false })
 
-      setOrders(data || [])
+      if (data && data.length > 0) {
+        // Get message counts for all orders
+        const orderIds = data.map(o => o.id)
+        const { data: messageCounts } = await supabase
+          .from('marketplace_order_messages')
+          .select('order_id')
+          .in('order_id', orderIds)
+
+        // Count messages per order
+        const countMap: Record<string, number> = {}
+        messageCounts?.forEach(m => {
+          countMap[m.order_id] = (countMap[m.order_id] || 0) + 1
+        })
+
+        // Add message counts to orders
+        const ordersWithCounts = data.map(order => ({
+          ...order,
+          message_count: countMap[order.id] || 0
+        }))
+
+        setOrders(ordersWithCounts)
+      } else {
+        setOrders([])
+      }
     } catch (error) {
       console.error('Error loading orders:', error)
     } finally {
@@ -168,7 +192,17 @@ export default function OrdersPage() {
               {filteredOrders.map((order) => (
                 <tr key={order.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4">
-                    <span className="font-mono text-sm font-medium text-gray-900">{order.order_number}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-sm font-medium text-gray-900">{order.order_number}</span>
+                      {order.message_count && order.message_count > 0 && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-primary-100 text-primary-700 text-xs font-medium rounded-full">
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          </svg>
+                          {order.message_count}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <div>
