@@ -111,22 +111,18 @@ export default function SupplierSignupPage() {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '')
 
-    // Create supplier record
+    // Create supplier record using RPC function (bypasses RLS)
     const { error: supplierError } = await supabase
-      .from('platform_suppliers')
-      .insert({
-        name: formData.businessName,
-        slug: slug + '-' + Date.now().toString(36),
-        description: formData.description,
-        contact_email: formData.email,
-        contact_phone: formData.phone,
-        address: formData.address,
-        city: formData.city,
-        country: formData.country,
-        status: 'pending',
+      .rpc('create_supplier_on_signup', {
+        p_name: formData.businessName,
+        p_slug: slug + '-' + Date.now().toString(36),
+        p_description: formData.description,
+        p_contact_email: formData.email,
+        p_contact_phone: formData.phone,
+        p_address: formData.address,
+        p_city: formData.city,
+        p_country: formData.country,
       })
-      .select()
-      .single()
 
     if (supplierError) {
       console.error('Supplier creation error:', supplierError)

@@ -33,6 +33,9 @@ const translations = {
   branding: { en: 'Branding', fr: 'Marque', ht: 'Mak', es: 'Marca' },
   logoUrl: { en: 'Logo URL', fr: 'URL du logo', ht: 'URL logo', es: 'URL del logo' },
   bannerUrl: { en: 'Banner URL', fr: 'URL de la bannière', ht: 'URL banyè', es: 'URL del banner' },
+  visibility: { en: 'Visibility & Promotion', fr: 'Visibilité et promotion', ht: 'Vizibilite ak pwomosyon', es: 'Visibilidad y promoción' },
+  featured: { en: 'Featured Supplier', fr: 'Fournisseur en vedette', ht: 'Founisè an vedèt', es: 'Proveedor destacado' },
+  featuredDesc: { en: 'Display your business in the Featured Suppliers section on the marketplace homepage', fr: 'Afficher votre entreprise dans la section Fournisseurs en vedette', ht: 'Afiche biznis ou nan seksyon Founisè an vedèt', es: 'Mostrar su negocio en la sección de Proveedores destacados' },
   save: { en: 'Save Changes', fr: 'Enregistrer les modifications', ht: 'Anrejistre chanjman', es: 'Guardar cambios' },
   saving: { en: 'Saving...', fr: 'Enregistrement...', ht: 'Ap anrejistre...', es: 'Guardando...' },
   saved: { en: 'Changes saved successfully', fr: 'Modifications enregistrées', ht: 'Chanjman anrejistre', es: 'Cambios guardados' },
@@ -64,6 +67,7 @@ export default function SettingsPage() {
     accepted_payment_methods: ['on_delivery', 'prepaid'],
     logo_url: '',
     banner_url: '',
+    is_featured: false,
   })
 
   useEffect(() => {
@@ -110,6 +114,7 @@ export default function SettingsPage() {
         accepted_payment_methods: supplier.accepted_payment_methods || ['on_delivery', 'prepaid'],
         logo_url: supplier.logo_url || '',
         banner_url: supplier.banner_url || '',
+        is_featured: supplier.is_featured || false,
       })
     } catch (error) {
       console.error('Error loading settings:', error)
@@ -164,6 +169,7 @@ export default function SettingsPage() {
         accepted_payment_methods: formData.accepted_payment_methods,
         logo_url: formData.logo_url || null,
         banner_url: formData.banner_url || null,
+        is_featured: formData.is_featured,
       }
 
       const { error: updateError } = await supabase
@@ -486,6 +492,40 @@ export default function SettingsPage() {
               {formData.banner_url && (
                 <div className="mt-2">
                   <img src={formData.banner_url} alt="Banner preview" className="w-full h-32 object-cover rounded-lg border" />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Visibility & Promotion */}
+        <div className="bg-white rounded-xl border border-gray-100 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('visibility', translations.visibility)}</h2>
+          <div className="flex items-start gap-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-3">
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.is_featured}
+                    onChange={(e) => setFormData(prev => ({ ...prev, is_featured: e.target.checked }))}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                </label>
+                <div>
+                  <p className="font-medium text-gray-900">{t('featured', translations.featured)}</p>
+                  <p className="text-sm text-gray-500">{t('featuredDesc', translations.featuredDesc)}</p>
+                </div>
+              </div>
+              {formData.is_featured && (
+                <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-sm text-yellow-800 flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    Your business will appear in the Featured Suppliers carousel on the marketplace
+                  </p>
                 </div>
               )}
             </div>
