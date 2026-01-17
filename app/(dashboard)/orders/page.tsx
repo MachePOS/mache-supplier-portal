@@ -195,7 +195,7 @@ export default function OrdersPage() {
                     <div className="flex items-center gap-2">
                       <span className="font-mono text-sm font-medium text-gray-900">{order.order_number}</span>
                       {order.message_count && order.message_count > 0 && (
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-primary-100 text-primary-700 text-xs font-medium rounded-full">
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-primary-500 text-white text-xs font-medium rounded-full animate-pulse">
                           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                           </svg>
