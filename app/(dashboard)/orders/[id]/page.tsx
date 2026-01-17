@@ -43,6 +43,12 @@ const translations = {
   on_delivery: { en: 'Pay on Delivery', fr: 'Paiement à la livraison', ht: 'Peye nan livrezon', es: 'Pago contra entrega' },
   full_upfront: { en: 'Full Payment Upfront', fr: 'Paiement intégral d\'avance', ht: 'Peman konplè davans', es: 'Pago completo por adelantado' },
   partial_payment: { en: 'Partial Payment', fr: 'Paiement partiel', ht: 'Peman an pati', es: 'Pago parcial' },
+  messages: { en: 'Messages', fr: 'Messages', ht: 'Mesaj', es: 'Mensajes' },
+  noMessages: { en: 'No messages yet', fr: 'Pas de messages', ht: 'Pa gen mesaj', es: 'Sin mensajes' },
+  typeMessage: { en: 'Type a message...', fr: 'Tapez un message...', ht: 'Tape yon mesaj...', es: 'Escribe un mensaje...' },
+  send: { en: 'Send', fr: 'Envoyer', ht: 'Voye', es: 'Enviar' },
+  you: { en: 'You', fr: 'Vous', ht: 'Ou', es: 'Tú' },
+  buyer: { en: 'Buyer', fr: 'Acheteur', ht: 'Achtè', es: 'Comprador' },
 }
 
 interface OrderItem {
@@ -54,6 +60,14 @@ interface OrderItem {
   unit_price: number
   total_price: number
   unit_of_measure: string | null
+}
+
+interface Message {
+  id: string
+  sender_type: 'buyer' | 'supplier'
+  sender_name: string | null
+  message: string
+  created_at: string
 }
 
 interface Order {
@@ -110,6 +124,9 @@ export default function OrderDetailPage() {
 
   const [order, setOrder] = useState<Order | null>(null)
   const [items, setItems] = useState<OrderItem[]>([])
+  const [messages, setMessages] = useState<Message[]>([])
+  const [newMessage, setNewMessage] = useState('')
+  const [sendingMessage, setSendingMessage] = useState(false)
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(false)
   const [trackingNumber, setTrackingNumber] = useState('')
@@ -144,6 +161,15 @@ export default function OrderDetailPage() {
       .eq('order_id', orderId)
 
     setItems(itemsData || [])
+
+    // Load messages
+    const { data: messagesData } = await supabase
+      .from('marketplace_order_messages')
+      .select('*')
+      .eq('order_id', orderId)
+      .order('created_at', { ascending: true })
+
+    setMessages(messagesData || [])
     setLoading(false)
   }
 
@@ -192,6 +218,30 @@ export default function OrderDetailPage() {
       .eq('id', orderId)
 
     setUpdating(false)
+  }
+
+  const sendMessage = async () => {
+    if (!order || !newMessage.trim()) return
+    setSendingMessage(true)
+
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from('marketplace_order_messages')
+      .insert({
+        order_id: orderId,
+        sender_type: 'supplier',
+        sender_name: 'Supplier',
+        message: newMessage.trim(),
+      })
+      .select()
+      .single()
+
+    if (!error && data) {
+      setMessages([...messages, data])
+      setNewMessage('')
+    }
+
+    setSendingMessage(false)
   }
 
   if (loading) {
@@ -442,6 +492,78 @@ export default function OrderDetailPage() {
             >
               {t('save', translations.save)}
             </button>
+          </div>
+
+          {/* Messages */}
+          <div className="bg-white rounded-xl border border-gray-100 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <svg className="w-5 h-5 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              {t('messages', translations.messages)}
+              {messages.length > 0 && (
+                <span className="bg-primary-100 text-primary-700 text-xs font-medium px-2 py-0.5 rounded-full">
+                  {messages.length}
+                </span>
+              )}
+            </h2>
+
+            {/* Messages List */}
+            <div className="space-y-3 max-h-64 overflow-y-auto mb-4">
+              {messages.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-4">{t('noMessages', translations.noMessages)}</p>
+              ) : (
+                messages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`p-3 rounded-lg ${
+                      msg.sender_type === 'supplier'
+                        ? 'bg-primary-50 border border-primary-100 ml-4'
+                        : 'bg-gray-50 border border-gray-100 mr-4'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className={`text-xs font-medium ${
+                        msg.sender_type === 'supplier' ? 'text-primary-700' : 'text-gray-700'
+                      }`}>
+                        {msg.sender_type === 'supplier'
+                          ? t('you', translations.you)
+                          : (msg.sender_name || t('buyer', translations.buyer))}
+                      </span>
+                      <span className="text-xs text-gray-400">
+                        {new Date(msg.created_at).toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-800">{msg.message}</p>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Send Message */}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && !sendingMessage && sendMessage()}
+                placeholder={t('typeMessage', translations.typeMessage)}
+                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              />
+              <button
+                onClick={sendMessage}
+                disabled={sendingMessage || !newMessage.trim()}
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {sendingMessage ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
