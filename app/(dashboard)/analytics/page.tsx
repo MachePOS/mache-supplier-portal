@@ -94,19 +94,35 @@ export default function AnalyticsPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    // Get supplier ID
+    // Get supplier ID - try supplier_users first, then fallback to contact_email
+    let supplierId: string | null = null
+
     const { data: supplierUser } = await supabase
       .from('supplier_users')
       .select('supplier_id')
-      .eq('user_id', user.id)
+      .eq('auth_user_id', user.id)
       .single()
 
-    if (!supplierUser) {
+    if (supplierUser) {
+      supplierId = supplierUser.supplier_id
+    } else {
+      // Fallback: check by contact email
+      const { data: supplier } = await supabase
+        .from('platform_suppliers')
+        .select('id')
+        .eq('contact_email', user.email)
+        .single()
+
+      if (supplier) {
+        supplierId = supplier.id
+      }
+    }
+
+    if (!supplierId) {
       setLoading(false)
       return
     }
 
-    const supplierId = supplierUser.supplier_id
     const dateFilter = getDateFilter()
 
     // Build orders query

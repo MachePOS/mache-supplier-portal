@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { getSupplierId } from '@/lib/getSupplier'
 
 const translations = {
   addProduct: { en: 'Add Product', fr: 'Ajouter un produit', ht: 'Ajoute pwodui', es: 'Agregar producto' },
@@ -94,36 +95,27 @@ export default function NewProductPage() {
   }, [])
 
   const loadData = async () => {
-    const supabase = createClient()
+    try {
+      const supplierId = await getSupplierId()
+      if (!supplierId) {
+        router.push('/pending')
+        return
+      }
 
-    // Get current user and supplier
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      router.push('/login')
-      return
+      setSupplierId(supplierId)
+
+      // Load categories
+      const supabase = createClient()
+      const { data: cats } = await supabase
+        .from('platform_supplier_categories')
+        .select('id, name')
+        .eq('is_active', true)
+        .order('sort_order')
+
+      setCategories(cats || [])
+    } catch (error) {
+      console.error('Error loading data:', error)
     }
-
-    const { data: supplier } = await supabase
-      .from('platform_suppliers')
-      .select('id')
-      .eq('contact_email', user.email)
-      .single()
-
-    if (!supplier) {
-      router.push('/pending')
-      return
-    }
-
-    setSupplierId(supplier.id)
-
-    // Load categories
-    const { data: cats } = await supabase
-      .from('platform_supplier_categories')
-      .select('id, name')
-      .eq('is_active', true)
-      .order('sort_order')
-
-    setCategories(cats || [])
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {

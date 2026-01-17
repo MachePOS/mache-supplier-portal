@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { getSupplierId } from '@/lib/getSupplier'
 
 const translations = {
   orders: { en: 'Orders', fr: 'Commandes', ht: 'Kòmand', es: 'Pedidos' },
@@ -57,30 +58,26 @@ export default function OrdersPage() {
   }, [])
 
   const loadOrders = async () => {
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    try {
+      const supplierId = await getSupplierId()
+      if (!supplierId) {
+        setLoading(false)
+        return
+      }
 
-    // Get supplier ID
-    const { data: supplier } = await supabase
-      .from('platform_suppliers')
-      .select('id')
-      .eq('contact_email', user.email)
-      .single()
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('marketplace_orders')
+        .select('id, order_number, business_name, total_amount, total_items, status, fulfillment_type, created_at, delivery_city')
+        .eq('supplier_id', supplierId)
+        .order('created_at', { ascending: false })
 
-    if (!supplier) {
+      setOrders(data || [])
+    } catch (error) {
+      console.error('Error loading orders:', error)
+    } finally {
       setLoading(false)
-      return
     }
-
-    const { data } = await supabase
-      .from('marketplace_orders')
-      .select('id, order_number, business_name, total_amount, total_items, status, fulfillment_type, created_at, delivery_city')
-      .eq('supplier_id', supplier.id)
-      .order('created_at', { ascending: false })
-
-    setOrders(data || [])
-    setLoading(false)
   }
 
   const filteredOrders = orders.filter(order => {

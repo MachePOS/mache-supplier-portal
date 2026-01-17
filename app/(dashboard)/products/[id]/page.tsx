@@ -103,61 +103,58 @@ export default function EditProductPage() {
   }, [productId])
 
   const loadData = async () => {
-    const supabase = createClient()
+    try {
+      const supabase = createClient()
 
-    // Get current user
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      router.push('/login')
-      return
-    }
+      // Load categories
+      const { data: cats } = await supabase
+        .from('platform_supplier_categories')
+        .select('id, name')
+        .eq('is_active', true)
+        .order('sort_order')
 
-    // Load categories
-    const { data: cats } = await supabase
-      .from('platform_supplier_categories')
-      .select('id, name')
-      .eq('is_active', true)
-      .order('sort_order')
+      setCategories(cats || [])
 
-    setCategories(cats || [])
+      // Load product
+      const { data: product, error: productError } = await supabase
+        .from('platform_supplier_products')
+        .select('*')
+        .eq('id', productId)
+        .single()
 
-    // Load product
-    const { data: product, error: productError } = await supabase
-      .from('platform_supplier_products')
-      .select('*')
-      .eq('id', productId)
-      .single()
+      if (productError || !product) {
+        setNotFound(true)
+        return
+      }
 
-    if (productError || !product) {
+      setFormData({
+        name: product.name || '',
+        description: product.description || '',
+        category_id: product.category_id || '',
+        price: product.price?.toString() || '',
+        compare_at_price: product.compare_at_price?.toString() || '',
+        cost: product.cost?.toString() || '',
+        sku: product.sku || '',
+        barcode: product.barcode || '',
+        brand: product.brand || '',
+        unit_of_measure: product.unit_of_measure || 'unit',
+        units_per_case: product.units_per_case?.toString() || '1',
+        min_order_quantity: product.min_order_quantity?.toString() || '1',
+        max_order_quantity: product.max_order_quantity?.toString() || '',
+        track_stock: product.track_stock || false,
+        stock_quantity: product.stock_quantity?.toString() || '',
+        low_stock_threshold: product.low_stock_threshold?.toString() || '',
+        is_active: product.is_active ?? true,
+        is_featured: product.is_featured ?? false,
+        in_stock: product.in_stock ?? true,
+        image_url: product.image_url || '',
+      })
+    } catch (error) {
+      console.error('Error loading product:', error)
       setNotFound(true)
+    } finally {
       setLoading(false)
-      return
     }
-
-    setFormData({
-      name: product.name || '',
-      description: product.description || '',
-      category_id: product.category_id || '',
-      price: product.price?.toString() || '',
-      compare_at_price: product.compare_at_price?.toString() || '',
-      cost: product.cost?.toString() || '',
-      sku: product.sku || '',
-      barcode: product.barcode || '',
-      brand: product.brand || '',
-      unit_of_measure: product.unit_of_measure || 'unit',
-      units_per_case: product.units_per_case?.toString() || '1',
-      min_order_quantity: product.min_order_quantity?.toString() || '1',
-      max_order_quantity: product.max_order_quantity?.toString() || '',
-      track_stock: product.track_stock || false,
-      stock_quantity: product.stock_quantity?.toString() || '',
-      low_stock_threshold: product.low_stock_threshold?.toString() || '',
-      is_active: product.is_active ?? true,
-      is_featured: product.is_featured ?? false,
-      in_stock: product.in_stock ?? true,
-      image_url: product.image_url || '',
-    })
-
-    setLoading(false)
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {

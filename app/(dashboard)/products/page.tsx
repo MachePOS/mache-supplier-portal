@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { getSupplierId } from '@/lib/getSupplier'
 
 const translations = {
   products: { en: 'Products', fr: 'Produits', ht: 'Pwodui', es: 'Productos' },
@@ -41,35 +42,31 @@ export default function ProductsPage() {
   }, [])
 
   const loadProducts = async () => {
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    try {
+      const supplierId = await getSupplierId()
+      if (!supplierId) {
+        setLoading(false)
+        return
+      }
 
-    // Get supplier ID
-    const { data: supplier } = await supabase
-      .from('platform_suppliers')
-      .select('id')
-      .eq('contact_email', user.email)
-      .single()
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('platform_supplier_products')
+        .select('id, name, sku, price, image_url, is_active, in_stock, stock_quantity, category:platform_supplier_categories(name)')
+        .eq('supplier_id', supplierId)
+        .order('created_at', { ascending: false })
 
-    if (!supplier) {
+      // Transform the data to match the Product interface (category comes as array from join)
+      const products = (data || []).map((item: any) => ({
+        ...item,
+        category: Array.isArray(item.category) ? item.category[0] || null : item.category
+      }))
+      setProducts(products)
+    } catch (error) {
+      console.error('Error loading products:', error)
+    } finally {
       setLoading(false)
-      return
     }
-
-    const { data } = await supabase
-      .from('platform_supplier_products')
-      .select('id, name, sku, price, image_url, is_active, in_stock, stock_quantity, category:platform_supplier_categories(name)')
-      .eq('supplier_id', supplier.id)
-      .order('created_at', { ascending: false })
-
-    // Transform the data to match the Product interface (category comes as array from join)
-    const products = (data || []).map((item: any) => ({
-      ...item,
-      category: Array.isArray(item.category) ? item.category[0] || null : item.category
-    }))
-    setProducts(products)
-    setLoading(false)
   }
 
   const filteredProducts = products.filter(p =>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { getSupplierInfo } from '@/lib/getSupplier'
 
 const translations = {
   welcome: { en: 'Welcome back', fr: 'Bon retour', ht: 'Byenveni ankò', es: 'Bienvenido de nuevo' },
@@ -53,37 +54,22 @@ export default function SupplierDashboard() {
   }, [])
 
   const loadDashboardData = async () => {
-    const supabase = createClient()
+    try {
+      const supplierInfo = await getSupplierInfo()
 
-    // Get current user
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    // Get supplier info
-    const { data: supplierUser } = await supabase
-      .from('supplier_users')
-      .select('supplier_id, supplier:platform_suppliers(name)')
-      .eq('auth_user_id', user.id)
-      .single()
-
-    if (!supplierUser) {
-      // Try to get supplier by email
-      const { data: supplier } = await supabase
-        .from('platform_suppliers')
-        .select('id, name')
-        .eq('contact_email', user.email)
-        .single()
-
-      if (supplier) {
-        setSupplierName(supplier.name)
-        await loadSupplierStats(supabase, supplier.id)
+      if (!supplierInfo) {
+        setLoading(false)
+        return
       }
-    } else {
-      setSupplierName((supplierUser.supplier as any)?.name || '')
-      await loadSupplierStats(supabase, supplierUser.supplier_id)
-    }
 
-    setLoading(false)
+      setSupplierName(supplierInfo.name)
+      const supabase = createClient()
+      await loadSupplierStats(supabase, supplierInfo.id)
+    } catch (error) {
+      console.error('Error loading dashboard:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const loadSupplierStats = async (supabase: any, supplierId: string) => {

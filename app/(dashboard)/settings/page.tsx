@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { getSupplierInfo } from '@/lib/getSupplier'
 
 const translations = {
   settings: { en: 'Settings', fr: 'Paramètres', ht: 'Paramèt', es: 'Configuración' },
@@ -70,45 +71,51 @@ export default function SettingsPage() {
   }, [])
 
   const loadSupplierData = async () => {
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    try {
+      const supplierInfo = await getSupplierInfo()
 
-    if (!user) {
-      router.push('/login')
-      return
+      if (!supplierInfo) {
+        router.push('/pending')
+        return
+      }
+
+      // Load full supplier data
+      const supabase = createClient()
+      const { data: supplier } = await supabase
+        .from('platform_suppliers')
+        .select('*')
+        .eq('id', supplierInfo.id)
+        .single()
+
+      if (!supplier) {
+        router.push('/pending')
+        return
+      }
+
+      setSupplierId(supplier.id)
+      setFormData({
+        name: supplier.name || '',
+        description: supplier.description || '',
+        contact_email: supplier.contact_email || '',
+        contact_phone: supplier.contact_phone || '',
+        website_url: supplier.website_url || '',
+        address: supplier.address || '',
+        city: supplier.city || '',
+        country: supplier.country || 'Haiti',
+        minimum_order_amount: supplier.minimum_order_amount?.toString() || '',
+        delivery_fee: supplier.delivery_fee?.toString() || '',
+        free_delivery_threshold: supplier.free_delivery_threshold?.toString() || '',
+        delivery_days_estimate: supplier.delivery_days_estimate?.toString() || '3',
+        delivery_areas: (supplier.delivery_areas || []).join(', '),
+        accepted_payment_methods: supplier.accepted_payment_methods || ['on_delivery', 'prepaid'],
+        logo_url: supplier.logo_url || '',
+        banner_url: supplier.banner_url || '',
+      })
+    } catch (error) {
+      console.error('Error loading settings:', error)
+    } finally {
+      setLoading(false)
     }
-
-    const { data: supplier } = await supabase
-      .from('platform_suppliers')
-      .select('*')
-      .eq('contact_email', user.email)
-      .single()
-
-    if (!supplier) {
-      router.push('/pending')
-      return
-    }
-
-    setSupplierId(supplier.id)
-    setFormData({
-      name: supplier.name || '',
-      description: supplier.description || '',
-      contact_email: supplier.contact_email || '',
-      contact_phone: supplier.contact_phone || '',
-      website_url: supplier.website_url || '',
-      address: supplier.address || '',
-      city: supplier.city || '',
-      country: supplier.country || 'Haiti',
-      minimum_order_amount: supplier.minimum_order_amount?.toString() || '',
-      delivery_fee: supplier.delivery_fee?.toString() || '',
-      free_delivery_threshold: supplier.free_delivery_threshold?.toString() || '',
-      delivery_days_estimate: supplier.delivery_days_estimate?.toString() || '3',
-      delivery_areas: (supplier.delivery_areas || []).join(', '),
-      accepted_payment_methods: supplier.accepted_payment_methods || ['on_delivery', 'prepaid'],
-      logo_url: supplier.logo_url || '',
-      banner_url: supplier.banner_url || '',
-    })
-    setLoading(false)
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
