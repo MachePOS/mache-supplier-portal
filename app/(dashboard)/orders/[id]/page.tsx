@@ -252,11 +252,6 @@ export default function OrderDetailPage() {
     )
   }
 
-  // Status timeline steps
-  const statusSteps = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'received']
-  const currentStepIndex = statusSteps.indexOf(order.status)
-  const isCancelled = order.status === 'cancelled'
-
   if (!order) {
     return (
       <div className="p-4">
@@ -269,6 +264,11 @@ export default function OrderDetailPage() {
       </div>
     )
   }
+
+  // Status timeline steps
+  const statusSteps = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'received']
+  const currentStepIndex = statusSteps.indexOf(order.status)
+  const isCancelled = order.status === 'cancelled'
 
   return (
     <div className="p-4 max-w-6xl mx-auto">
