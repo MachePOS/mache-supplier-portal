@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useLanguage } from '@/contexts/LanguageContext'
 
@@ -256,7 +257,7 @@ export default function AnalyticsPage() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white rounded-xl border-2 border-gray-300 shadow-sm p-6 hover:shadow-md hover:border-green-400 hover:bg-green-50/30 transition-all duration-200 cursor-pointer">
+        <Link href="/orders" className="bg-white rounded-xl border-2 border-gray-300 shadow-sm p-6 hover:shadow-md hover:border-green-400 hover:bg-green-50/30 transition-all duration-200 cursor-pointer">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-green-100 rounded-lg">
               <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -268,9 +269,9 @@ export default function AnalyticsPage() {
               <p className="text-2xl font-bold text-gray-900">${analytics.totalRevenue.toFixed(2)}</p>
             </div>
           </div>
-        </div>
+        </Link>
 
-        <div className="bg-white rounded-xl border-2 border-gray-300 shadow-sm p-6 hover:shadow-md hover:border-blue-400 hover:bg-blue-50/30 transition-all duration-200 cursor-pointer">
+        <Link href="/orders" className="bg-white rounded-xl border-2 border-gray-300 shadow-sm p-6 hover:shadow-md hover:border-blue-400 hover:bg-blue-50/30 transition-all duration-200 cursor-pointer">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-blue-100 rounded-lg">
               <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -282,9 +283,9 @@ export default function AnalyticsPage() {
               <p className="text-2xl font-bold text-gray-900">{analytics.totalOrders}</p>
             </div>
           </div>
-        </div>
+        </Link>
 
-        <div className="bg-white rounded-xl border-2 border-gray-300 shadow-sm p-6 hover:shadow-md hover:border-purple-400 hover:bg-purple-50/30 transition-all duration-200 cursor-pointer">
+        <Link href="/orders" className="bg-white rounded-xl border-2 border-gray-300 shadow-sm p-6 hover:shadow-md hover:border-purple-400 hover:bg-purple-50/30 transition-all duration-200 cursor-pointer">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-purple-100 rounded-lg">
               <svg className="w-6 h-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -296,9 +297,9 @@ export default function AnalyticsPage() {
               <p className="text-2xl font-bold text-gray-900">${analytics.avgOrderValue.toFixed(2)}</p>
             </div>
           </div>
-        </div>
+        </Link>
 
-        <div className="bg-white rounded-xl border-2 border-gray-300 shadow-sm p-6 hover:shadow-md hover:border-orange-400 hover:bg-orange-50/30 transition-all duration-200 cursor-pointer">
+        <Link href="/orders" className="bg-white rounded-xl border-2 border-gray-300 shadow-sm p-6 hover:shadow-md hover:border-orange-400 hover:bg-orange-50/30 transition-all duration-200 cursor-pointer">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-orange-100 rounded-lg">
               <svg className="w-6 h-6 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -310,7 +311,7 @@ export default function AnalyticsPage() {
               <p className="text-2xl font-bold text-gray-900">{analytics.totalCustomers}</p>
             </div>
           </div>
-        </div>
+        </Link>
       </div>
 
       {/* Payouts Section */}

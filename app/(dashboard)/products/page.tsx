@@ -151,7 +151,10 @@ export default function ProductsPage() {
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {/* Total Products */}
-        <div className="bg-white rounded-xl border-2 border-gray-300 shadow-sm p-4 hover:shadow-md hover:border-indigo-400 hover:bg-indigo-50/30 transition-all duration-200 cursor-pointer">
+        <div
+          onClick={() => { setCategoryFilter('all'); setStatusFilter('all'); setStockFilter('all'); }}
+          className="bg-white rounded-xl border-2 border-gray-300 shadow-sm p-4 hover:shadow-md hover:border-indigo-400 hover:bg-indigo-50/30 transition-all duration-200 cursor-pointer"
+        >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
               <svg className="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -166,7 +169,10 @@ export default function ProductsPage() {
         </div>
 
         {/* Categories */}
-        <div className="bg-white rounded-xl border-2 border-gray-300 shadow-sm p-4 hover:shadow-md hover:border-purple-400 hover:bg-purple-50/30 transition-all duration-200 cursor-pointer">
+        <div
+          onClick={() => { setCategoryFilter('all'); setStatusFilter('active'); setStockFilter('all'); }}
+          className="bg-white rounded-xl border-2 border-gray-300 shadow-sm p-4 hover:shadow-md hover:border-purple-400 hover:bg-purple-50/30 transition-all duration-200 cursor-pointer"
+        >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
               <svg className="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -181,7 +187,10 @@ export default function ProductsPage() {
         </div>
 
         {/* In Stock */}
-        <div className="bg-white rounded-xl border-2 border-gray-300 shadow-sm p-4 hover:shadow-md hover:border-green-400 hover:bg-green-50/30 transition-all duration-200 cursor-pointer">
+        <div
+          onClick={() => { setCategoryFilter('all'); setStatusFilter('all'); setStockFilter('inStock'); }}
+          className="bg-white rounded-xl border-2 border-gray-300 shadow-sm p-4 hover:shadow-md hover:border-green-400 hover:bg-green-50/30 transition-all duration-200 cursor-pointer"
+        >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
               <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -199,7 +208,10 @@ export default function ProductsPage() {
         </div>
 
         {/* Low Stock */}
-        <div className="bg-white rounded-xl border-2 border-gray-300 shadow-sm p-4 hover:shadow-md hover:border-orange-400 hover:bg-orange-50/30 transition-all duration-200 cursor-pointer">
+        <div
+          onClick={() => { setCategoryFilter('all'); setStatusFilter('all'); setStockFilter('lowStock'); }}
+          className="bg-white rounded-xl border-2 border-gray-300 shadow-sm p-4 hover:shadow-md hover:border-orange-400 hover:bg-orange-50/30 transition-all duration-200 cursor-pointer"
+        >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
               <svg className="w-5 h-5 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
