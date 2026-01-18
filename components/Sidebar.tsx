@@ -102,8 +102,8 @@ export default function Sidebar() {
 
   return (
     <div className="flex flex-col w-64 bg-gray-900 min-h-screen">
-      <div className="flex items-center justify-center h-16 px-4 bg-gray-800">
-        <div className="flex items-center gap-2">
+      <div className="bg-gray-800 px-4 py-3">
+        <div className="flex items-center gap-2 mb-3">
           <div className="w-8 h-8 rounded-lg bg-primary-500 flex items-center justify-center">
             <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
@@ -111,6 +111,7 @@ export default function Sidebar() {
           </div>
           <span className="text-white text-lg font-bold">Supplier Portal</span>
         </div>
+        <LanguageSelector />
       </div>
 
       <nav className="flex-1 px-2 py-4 space-y-1">
@@ -134,8 +135,7 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="p-4 border-t border-gray-800 space-y-2">
-        <LanguageSelector />
+      <div className="p-4 border-t border-gray-800">
         <button
           onClick={handleSignOut}
           className="flex items-center w-full px-3 py-2.5 text-sm font-medium text-gray-300 rounded-lg hover:bg-gray-800 hover:text-white transition-colors"
