@@ -7,6 +7,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 const translations = {
   dashboard: { en: 'Dashboard', fr: 'Tableau de bord', ht: 'Tablo bò', es: 'Panel' },
   products: { en: 'Products', fr: 'Produits', ht: 'Pwodui', es: 'Productos' },
+  deals: { en: 'Deals', fr: 'Offres', ht: 'Òf', es: 'Ofertas' },
   orders: { en: 'Orders', fr: 'Commandes', ht: 'Kòmand', es: 'Pedidos' },
   analytics: { en: 'Analytics', fr: 'Analytique', ht: 'Analiz', es: 'Análisis' },
   settings: { en: 'Settings', fr: 'Paramètres', ht: 'Paramèt', es: 'Configuración' },
@@ -61,6 +62,15 @@ function SettingsIcon({ className }: { className?: string }) {
   )
 }
 
+function DealsIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
+    </svg>
+  )
+}
+
 function LogoutIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -72,6 +82,7 @@ function LogoutIcon({ className }: { className?: string }) {
 const navItems: NavItem[] = [
   { name: 'Dashboard', href: '/', icon: DashboardIcon, translationKey: 'dashboard' },
   { name: 'Products', href: '/products', icon: ProductsIcon, translationKey: 'products' },
+  { name: 'Deals', href: '/deals', icon: DealsIcon, translationKey: 'deals' },
   { name: 'Orders', href: '/orders', icon: OrdersIcon, translationKey: 'orders' },
   { name: 'Analytics', href: '/analytics', icon: AnalyticsIcon, translationKey: 'analytics' },
   { name: 'Settings', href: '/settings', icon: SettingsIcon, translationKey: 'settings' },
