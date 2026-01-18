@@ -2,7 +2,14 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 
-type Language = 'en' | 'fr' | 'ht' | 'es'
+export type Language = 'en' | 'fr' | 'ht' | 'es'
+
+export const languages: { code: Language; name: string; flag: string }[] = [
+  { code: 'en', name: 'English', flag: 'us' },
+  { code: 'fr', name: 'Français', flag: 'fr' },
+  { code: 'ht', name: 'Kreyòl', flag: 'ht' },
+  { code: 'es', name: 'Español', flag: 'es' },
+]
 
 interface LanguageContextType {
   language: Language
