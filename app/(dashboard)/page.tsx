@@ -152,7 +152,7 @@ export default function SupplierDashboard() {
 
       {/* Stats Grid - More Compact */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-        <div className="bg-white rounded-lg p-4 border border-gray-100">
+        <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md hover:border-primary-200 hover:bg-primary-50/30 transition-all duration-200 cursor-pointer">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary-100 rounded-lg">
               <svg className="w-5 h-5 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -166,7 +166,7 @@ export default function SupplierDashboard() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg p-4 border border-gray-100">
+        <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md hover:border-green-200 hover:bg-green-50/30 transition-all duration-200 cursor-pointer">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-green-100 rounded-lg">
               <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -180,7 +180,7 @@ export default function SupplierDashboard() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg p-4 border border-gray-100">
+        <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md hover:border-yellow-200 hover:bg-yellow-50/30 transition-all duration-200 cursor-pointer">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-yellow-100 rounded-lg">
               <svg className="w-5 h-5 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -194,7 +194,7 @@ export default function SupplierDashboard() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg p-4 border border-gray-100">
+        <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-200 hover:bg-blue-50/30 transition-all duration-200 cursor-pointer">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-100 rounded-lg">
               <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
