@@ -4,12 +4,53 @@ export interface SupplierInfo {
   id: string
   name: string
   status: string
+  isImpersonating?: boolean
+  adminName?: string
+}
+
+// Helper to get impersonation cookie (client-side)
+function getImpersonationCookie(): { supplierId: string; supplierName: string; adminName: string } | null {
+  if (typeof document === 'undefined') return null
+
+  const cookies = document.cookie.split(';')
+  for (const cookie of cookies) {
+    const [name, value] = cookie.trim().split('=')
+    if (name === 'supplier_impersonation') {
+      try {
+        return JSON.parse(decodeURIComponent(value))
+      } catch {
+        return null
+      }
+    }
+  }
+  return null
 }
 
 export async function getSupplierInfo(): Promise<SupplierInfo | null> {
   const supabase = createClient()
 
   try {
+    // Check for impersonation first
+    const impersonation = getImpersonationCookie()
+    if (impersonation) {
+      // Fetch the supplier info for the impersonated supplier
+      const { data: supplier } = await supabase
+        .from('platform_suppliers')
+        .select('id, name, status')
+        .eq('id', impersonation.supplierId)
+        .single()
+
+      if (supplier) {
+        return {
+          id: supplier.id,
+          name: supplier.name || '',
+          status: supplier.status || 'approved',
+          isImpersonating: true,
+          adminName: impersonation.adminName
+        }
+      }
+    }
+
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return null
 
