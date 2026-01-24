@@ -8,20 +8,17 @@ export interface SupplierInfo {
   adminName?: string
 }
 
-// Helper to get impersonation cookie (client-side)
-function getImpersonationCookie(): { supplierId: string; supplierName: string; adminName: string } | null {
-  if (typeof document === 'undefined') return null
+// Check impersonation status via API (since cookie is httpOnly)
+async function checkImpersonationStatus(): Promise<{ isImpersonating: boolean; supplierId?: string; supplierName?: string; adminName?: string } | null> {
+  if (typeof window === 'undefined') return null
 
-  const cookies = document.cookie.split(';')
-  for (const cookie of cookies) {
-    const [name, value] = cookie.trim().split('=')
-    if (name === 'supplier_impersonation') {
-      try {
-        return JSON.parse(decodeURIComponent(value))
-      } catch {
-        return null
-      }
+  try {
+    const response = await fetch('/api/impersonate/status')
+    if (response.ok) {
+      return await response.json()
     }
+  } catch {
+    // Ignore errors
   }
   return null
 }
@@ -30,9 +27,9 @@ export async function getSupplierInfo(): Promise<SupplierInfo | null> {
   const supabase = createClient()
 
   try {
-    // Check for impersonation first
-    const impersonation = getImpersonationCookie()
-    if (impersonation) {
+    // Check for impersonation first via API
+    const impersonation = await checkImpersonationStatus()
+    if (impersonation?.isImpersonating && impersonation.supplierId) {
       // Fetch the supplier info for the impersonated supplier
       const { data: supplier } = await supabase
         .from('platform_suppliers')
