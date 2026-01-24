@@ -27,12 +27,13 @@ export default function DashboardLayout({
             adminName={supplierInfo.adminName}
           />
         )}
+        {/* Header with centered language selector */}
+        <div className="flex items-center justify-center py-2 px-4 bg-white border-b border-gray-100">
+          <LanguageSelector />
+        </div>
         <main className="flex-1 overflow-auto">
           {children}
         </main>
-      </div>
-      <div className="fixed top-4 right-4 z-50">
-        <LanguageSelector />
       </div>
     </div>
   )
