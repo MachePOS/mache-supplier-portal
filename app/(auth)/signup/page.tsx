@@ -18,7 +18,7 @@ const translations = {
   phone: { en: 'Phone Number', fr: 'Numéro de téléphone', ht: 'Nimewo telefòn', es: 'Número de teléfono' },
   phonePlaceholder: { en: '+509 0000-0000', fr: '+509 0000-0000', ht: '+509 0000-0000', es: '+509 0000-0000' },
   password: { en: 'Password', fr: 'Mot de passe', ht: 'Modpas', es: 'Contraseña' },
-  passwordPlaceholder: { en: 'At least 6 characters', fr: 'Au moins 6 caractères', ht: 'Omwen 6 karaktè', es: 'Al menos 6 caracteres' },
+  passwordPlaceholder: { en: 'Min 8 chars with upper, lower & number', fr: 'Min 8 car. avec maj, min et chiffre', ht: 'Omwen 8 karaktè ak majiskil, miniskil ak nimewo', es: 'Mín 8 car. con mayús, minús y número' },
   confirmPassword: { en: 'Confirm Password', fr: 'Confirmer le mot de passe', ht: 'Konfime modpas', es: 'Confirmar contraseña' },
   country: { en: 'Country', fr: 'Pays', ht: 'Peyi', es: 'País' },
   city: { en: 'City', fr: 'Ville', ht: 'Vil', es: 'Ciudad' },
@@ -33,7 +33,7 @@ const translations = {
   signIn: { en: 'Sign in', fr: 'Connexion', ht: 'Konekte', es: 'Iniciar sesión' },
   terms: { en: 'By signing up, you agree to our Terms of Service and Privacy Policy', fr: 'En vous inscrivant, vous acceptez nos conditions', ht: 'Lè ou enskri, ou aksepte kondisyon nou yo', es: 'Al registrarte, aceptas nuestros términos' },
   passwordMismatch: { en: 'Passwords do not match', fr: 'Les mots de passe ne correspondent pas', ht: 'Modpas yo pa matche', es: 'Las contraseñas no coinciden' },
-  passwordLength: { en: 'Password must be at least 6 characters', fr: 'Le mot de passe doit comporter au moins 6 caractères', ht: 'Modpas dwe gen omwen 6 karaktè', es: 'La contraseña debe tener al menos 6 caracteres' },
+  passwordLength: { en: 'Password must be at least 8 characters with uppercase, lowercase and number', fr: 'Le mot de passe doit comporter au moins 8 caractères avec majuscule, minuscule et chiffre', ht: 'Modpas dwe gen omwen 8 karaktè ak majiskil, miniskil ak nimewo', es: 'La contraseña debe tener al menos 8 caracteres con mayúscula, minúscula y número' },
 }
 
 export default function SupplierSignupPage() {
@@ -69,7 +69,9 @@ export default function SupplierSignupPage() {
       return
     }
 
-    if (formData.password.length < 6) {
+    // Password complexity validation: min 8 chars, uppercase, lowercase, number
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/
+    if (!passwordRegex.test(formData.password)) {
       setError(t('passwordLength', translations.passwordLength))
       setLoading(false)
       return

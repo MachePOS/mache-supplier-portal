@@ -16,7 +16,7 @@ const translations = {
   updatePassword: { en: 'Update Password', fr: 'Mettre à jour', ht: 'Mete ajou modpas', es: 'Actualizar contraseña' },
   updating: { en: 'Updating...', fr: 'Mise à jour...', ht: 'Ap mete ajou...', es: 'Actualizando...' },
   passwordMismatch: { en: 'Passwords do not match', fr: 'Les mots de passe ne correspondent pas', ht: 'Modpas yo pa menm', es: 'Las contraseñas no coinciden' },
-  passwordTooShort: { en: 'Password must be at least 6 characters', fr: 'Le mot de passe doit contenir au moins 6 caractères', ht: 'Modpas dwe gen omwen 6 karaktè', es: 'La contraseña debe tener al menos 6 caracteres' },
+  passwordTooShort: { en: 'Password must be at least 8 characters with uppercase, lowercase and number', fr: 'Le mot de passe doit comporter au moins 8 caractères avec majuscule, minuscule et chiffre', ht: 'Modpas dwe gen omwen 8 karaktè ak majiskil, miniskil ak nimewo', es: 'La contraseña debe tener al menos 8 caracteres con mayúscula, minúscula y número' },
   successTitle: { en: 'Password Updated', fr: 'Mot de passe mis à jour', ht: 'Modpas mete ajou', es: 'Contraseña actualizada' },
   successMessage: { en: 'Your password has been updated successfully.', fr: 'Votre mot de passe a été mis à jour.', ht: 'Modpas ou mete ajou avèk siksè.', es: 'Tu contraseña ha sido actualizada.' },
   goToLogin: { en: 'Go to Login', fr: 'Aller à la connexion', ht: 'Ale nan koneksyon', es: 'Ir al inicio de sesión' },
@@ -52,7 +52,9 @@ export default function ResetPasswordPage() {
     e.preventDefault()
     setError('')
 
-    if (password.length < 6) {
+    // Password complexity validation: min 8 chars, uppercase, lowercase, number
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/
+    if (!passwordRegex.test(password)) {
       setError(t('passwordTooShort', translations.passwordTooShort))
       return
     }
@@ -165,7 +167,7 @@ export default function ResetPasswordPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder={t('passwordPlaceholder', translations.passwordPlaceholder)}
                 required
-                minLength={6}
+                minLength={8}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
               />
             </div>
@@ -181,7 +183,7 @@ export default function ResetPasswordPage() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder={t('confirmPlaceholder', translations.confirmPlaceholder)}
                 required
-                minLength={6}
+                minLength={8}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
               />
             </div>

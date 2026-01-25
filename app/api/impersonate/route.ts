@@ -1,13 +1,35 @@
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { rateLimit, getClientIp, rateLimitResponse, RateLimitPresets } from '@/lib/rate-limit'
+import { validate, validationErrorResponse } from '@/lib/validation'
 
 export async function POST(request: NextRequest) {
-  const { sessionId } = await request.json()
+  // Rate limiting - 5 requests per minute for impersonation
+  const clientIp = getClientIp(request)
+  const rateLimitResult = rateLimit(`impersonate:${clientIp}`, RateLimitPresets.impersonate)
 
-  if (!sessionId) {
-    return NextResponse.json({ error: 'No session ID provided' }, { status: 400 })
+  if (!rateLimitResult.success) {
+    return rateLimitResponse(rateLimitResult)
   }
+
+  let body: Record<string, unknown>
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+  }
+
+  // Validate input
+  const validation = validate(body, {
+    sessionId: { type: 'uuid', required: true },
+  })
+
+  if (!validation.valid) {
+    return validationErrorResponse(validation)
+  }
+
+  const { sessionId } = body as { sessionId: string }
 
   // Use service role client to bypass RLS for impersonation validation
   const supabase = createClient(
@@ -72,8 +94,8 @@ export async function POST(request: NextRequest) {
   cookieStore.set('supplier_impersonation', impersonationData, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 4 * 60 * 60, // 4 hours
+    sameSite: 'strict', // Stricter for impersonation security
+    maxAge: 30 * 60, // 30 minutes (reduced from 4 hours for security)
     path: '/',
   })
 
