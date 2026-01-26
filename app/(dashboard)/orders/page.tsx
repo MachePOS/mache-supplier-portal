@@ -25,6 +25,14 @@ const translations = {
   items: { en: 'items', fr: 'articles', ht: 'atik', es: 'artículos' },
   delivery: { en: 'Delivery', fr: 'Livraison', ht: 'Livrezon', es: 'Entrega' },
   pickup: { en: 'Pickup', fr: 'Retrait', ht: 'Retire', es: 'Recoger' },
+  dateFrom: { en: 'From', fr: 'De', ht: 'Depi', es: 'Desde' },
+  dateTo: { en: 'To', fr: 'À', ht: 'Jiska', es: 'Hasta' },
+  today: { en: 'Today', fr: 'Aujourd\'hui', ht: 'Jodi a', es: 'Hoy' },
+  thisWeek: { en: 'This Week', fr: 'Cette semaine', ht: 'Semèn sa a', es: 'Esta semana' },
+  thisMonth: { en: 'This Month', fr: 'Ce mois', ht: 'Mwa sa a', es: 'Este mes' },
+  allTime: { en: 'All Time', fr: 'Tout le temps', ht: 'Tout tan', es: 'Todo el tiempo' },
+  fulfillment: { en: 'Fulfillment', fr: 'Exécution', ht: 'Egzekisyon', es: 'Cumplimiento' },
+  clearFilters: { en: 'Clear Filters', fr: 'Effacer les filtres', ht: 'Efase filtè yo', es: 'Limpiar filtros' },
 }
 
 interface Order {
@@ -55,6 +63,10 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [dateRangeFilter, setDateRangeFilter] = useState('all')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [fulfillmentFilter, setFulfillmentFilter] = useState('all')
   const [currentPage, setCurrentPage] = useState(1)
   const { t } = useLanguage()
 
@@ -111,14 +123,61 @@ export default function OrdersPage() {
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchTerm, statusFilter])
+  }, [searchTerm, statusFilter, dateRangeFilter, dateFrom, dateTo, fulfillmentFilter])
+
+  // Helper function for date range filtering
+  const getDateRangeBounds = () => {
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+
+    switch (dateRangeFilter) {
+      case 'today':
+        return { from: today, to: new Date(today.getTime() + 24 * 60 * 60 * 1000) }
+      case 'week':
+        const weekStart = new Date(today)
+        weekStart.setDate(today.getDate() - today.getDay())
+        return { from: weekStart, to: new Date(today.getTime() + 24 * 60 * 60 * 1000) }
+      case 'month':
+        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
+        return { from: monthStart, to: new Date(today.getTime() + 24 * 60 * 60 * 1000) }
+      case 'custom':
+        return {
+          from: dateFrom ? new Date(dateFrom) : null,
+          to: dateTo ? new Date(new Date(dateTo).getTime() + 24 * 60 * 60 * 1000) : null
+        }
+      default:
+        return { from: null, to: null }
+    }
+  }
 
   const filteredOrders = orders.filter(order => {
     const matchesSearch = order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.business_name?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter
-    return matchesSearch && matchesStatus
+    const matchesFulfillment = fulfillmentFilter === 'all' || order.fulfillment_type === fulfillmentFilter
+
+    // Date range filtering
+    let matchesDate = true
+    if (dateRangeFilter !== 'all') {
+      const { from, to } = getDateRangeBounds()
+      const orderDate = new Date(order.created_at)
+      if (from && orderDate < from) matchesDate = false
+      if (to && orderDate >= to) matchesDate = false
+    }
+
+    return matchesSearch && matchesStatus && matchesFulfillment && matchesDate
   })
+
+  const clearFilters = () => {
+    setSearchTerm('')
+    setStatusFilter('all')
+    setDateRangeFilter('all')
+    setDateFrom('')
+    setDateTo('')
+    setFulfillmentFilter('all')
+  }
+
+  const hasActiveFilters = searchTerm || statusFilter !== 'all' || dateRangeFilter !== 'all' || fulfillmentFilter !== 'all'
 
   // Paginate orders
   const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE)
@@ -147,15 +206,86 @@ export default function OrdersPage() {
       </div>
 
       {/* Filters */}
-      <div className="mb-6 flex flex-wrap gap-4">
-        <input
-          type="text"
-          placeholder={t('search', translations.search)}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-        />
+      <div className="mb-6 space-y-4">
+        {/* Top row: Search, Date Range, Fulfillment, Clear */}
+        <div className="flex flex-wrap gap-3 items-center">
+          <input
+            type="text"
+            placeholder={t('search', translations.search)}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 w-64"
+          />
 
+          {/* Date Range Quick Filters */}
+          <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
+            {[
+              { value: 'all', label: t('allTime', translations.allTime) },
+              { value: 'today', label: t('today', translations.today) },
+              { value: 'week', label: t('thisWeek', translations.thisWeek) },
+              { value: 'month', label: t('thisMonth', translations.thisMonth) },
+            ].map(option => (
+              <button
+                key={option.value}
+                onClick={() => setDateRangeFilter(option.value)}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  dateRangeFilter === option.value ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Custom Date Range */}
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => {
+                setDateFrom(e.target.value)
+                setDateRangeFilter('custom')
+              }}
+              className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+            />
+            <span className="text-gray-400">-</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => {
+                setDateTo(e.target.value)
+                setDateRangeFilter('custom')
+              }}
+              className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
+
+          {/* Fulfillment Type Filter */}
+          <select
+            value={fulfillmentFilter}
+            onChange={(e) => setFulfillmentFilter(e.target.value)}
+            className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white"
+          >
+            <option value="all">{t('fulfillment', translations.fulfillment)}: {t('all', translations.all)}</option>
+            <option value="delivery">{t('delivery', translations.delivery)}</option>
+            <option value="pickup">{t('pickup', translations.pickup)}</option>
+          </select>
+
+          {/* Clear Filters */}
+          {hasActiveFilters && (
+            <button
+              onClick={clearFilters}
+              className="px-3 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              {t('clearFilters', translations.clearFilters)}
+            </button>
+          )}
+        </div>
+
+        {/* Status filter row */}
         <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => setStatusFilter('all')}

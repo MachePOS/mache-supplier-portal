@@ -49,6 +49,24 @@ const translations = {
   send: { en: 'Send', fr: 'Envoyer', ht: 'Voye', es: 'Enviar' },
   you: { en: 'You', fr: 'Vous', ht: 'Ou', es: 'Tú' },
   buyer: { en: 'Buyer', fr: 'Acheteur', ht: 'Achtè', es: 'Comprador' },
+  downloadInvoice: { en: 'Download Invoice', fr: 'Télécharger la facture', ht: 'Telechaje fakti', es: 'Descargar factura' },
+  invoice: { en: 'Invoice', fr: 'Facture', ht: 'Fakti', es: 'Factura' },
+  billTo: { en: 'Bill To', fr: 'Facturer à', ht: 'Fakti pou', es: 'Facturar a' },
+  shipTo: { en: 'Ship To', fr: 'Livrer à', ht: 'Voye bay', es: 'Enviar a' },
+  invoiceDate: { en: 'Invoice Date', fr: 'Date de facture', ht: 'Dat fakti', es: 'Fecha de factura' },
+  orderDate: { en: 'Order Date', fr: 'Date de commande', ht: 'Dat kòmand', es: 'Fecha de pedido' },
+  description: { en: 'Description', fr: 'Description', ht: 'Deskripsyon', es: 'Descripción' },
+  quantity: { en: 'Qty', fr: 'Qté', ht: 'Kantite', es: 'Cant' },
+  unitPrice: { en: 'Unit Price', fr: 'Prix unitaire', ht: 'Pri inite', es: 'Precio unitario' },
+  amount: { en: 'Amount', fr: 'Montant', ht: 'Montan', es: 'Monto' },
+  thankYou: { en: 'Thank you for your business!', fr: 'Merci pour votre confiance!', ht: 'Mèsi pou biznis ou!', es: '¡Gracias por su negocio!' },
+  packingSlip: { en: 'Packing Slip', fr: 'Bordereau d\'expédition', ht: 'Bòdwo anvwa', es: 'Lista de empaque' },
+  printPackingSlip: { en: 'Print Packing Slip', fr: 'Imprimer bordereau', ht: 'Enprime bòdwo', es: 'Imprimir lista' },
+  packedBy: { en: 'Packed by:', fr: 'Emballé par:', ht: 'Anbale pa:', es: 'Empacado por:' },
+  dateTime: { en: 'Date/Time:', fr: 'Date/Heure:', ht: 'Dat/Lè:', es: 'Fecha/Hora:' },
+  itemChecklist: { en: 'Item Checklist', fr: 'Liste de contrôle', ht: 'Lis kontwòl', es: 'Lista de verificación' },
+  packed: { en: 'Packed', fr: 'Emballé', ht: 'Anbale', es: 'Empacado' },
+  specialInstructions: { en: 'Special Instructions', fr: 'Instructions spéciales', ht: 'Enstriksyon espesyal', es: 'Instrucciones especiales' },
 }
 
 interface OrderItem {
@@ -244,6 +262,303 @@ export default function OrderDetailPage() {
     setSendingMessage(false)
   }
 
+  const generateInvoice = () => {
+    if (!order) return
+
+    const invoiceWindow = window.open('', '_blank')
+    if (!invoiceWindow) return
+
+    const invoiceHTML = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${t('invoice', translations.invoice)} - ${order.order_number}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; padding: 40px; }
+          .invoice-header { display: flex; justify-content: space-between; margin-bottom: 40px; }
+          .invoice-title { font-size: 32px; font-weight: bold; color: #6366f1; }
+          .invoice-meta { text-align: right; }
+          .invoice-meta p { margin: 4px 0; color: #666; }
+          .invoice-meta strong { color: #333; }
+          .parties { display: flex; gap: 60px; margin-bottom: 40px; }
+          .party { flex: 1; }
+          .party-label { font-size: 12px; font-weight: bold; text-transform: uppercase; color: #666; margin-bottom: 8px; }
+          .party-name { font-size: 16px; font-weight: bold; margin-bottom: 4px; }
+          .party-details { font-size: 14px; color: #666; line-height: 1.6; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+          th { background: #f3f4f6; padding: 12px; text-align: left; font-size: 12px; font-weight: bold; text-transform: uppercase; color: #666; border-bottom: 2px solid #e5e7eb; }
+          td { padding: 12px; border-bottom: 1px solid #e5e7eb; }
+          .text-right { text-align: right; }
+          .totals { width: 300px; margin-left: auto; }
+          .totals-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb; }
+          .totals-row.total { font-size: 18px; font-weight: bold; border-bottom: none; border-top: 2px solid #333; padding-top: 12px; }
+          .footer { text-align: center; margin-top: 60px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #666; font-size: 14px; }
+          .status-badge { display: inline-block; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: bold; }
+          .status-paid { background: #dcfce7; color: #166534; }
+          .status-unpaid { background: #fee2e2; color: #991b1b; }
+          .status-partial { background: #fef3c7; color: #92400e; }
+          @media print {
+            body { padding: 20px; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="invoice-header">
+          <div>
+            <div class="invoice-title">${t('invoice', translations.invoice)}</div>
+            <p style="color: #666; margin-top: 8px;">#${order.order_number}</p>
+          </div>
+          <div class="invoice-meta">
+            <p><strong>${t('invoiceDate', translations.invoiceDate)}:</strong> ${new Date().toLocaleDateString()}</p>
+            <p><strong>${t('orderDate', translations.orderDate)}:</strong> ${new Date(order.created_at).toLocaleDateString()}</p>
+            <p style="margin-top: 8px;">
+              <span class="status-badge ${order.payment_status === 'paid' ? 'status-paid' : order.payment_status === 'partial' ? 'status-partial' : 'status-unpaid'}">
+                ${t(order.payment_status as keyof typeof translations, translations[order.payment_status as keyof typeof translations])}
+              </span>
+            </p>
+          </div>
+        </div>
+
+        <div class="parties">
+          <div class="party">
+            <div class="party-label">${t('billTo', translations.billTo)}</div>
+            <div class="party-name">${order.business_name}</div>
+            <div class="party-details">
+              ${order.ordered_by_name ? order.ordered_by_name + '<br>' : ''}
+              ${order.delivery_address || ''}
+              ${order.delivery_city ? '<br>' + order.delivery_city : ''}
+              ${order.delivery_phone ? '<br>' + order.delivery_phone : ''}
+            </div>
+          </div>
+          ${order.fulfillment_type === 'delivery' ? `
+          <div class="party">
+            <div class="party-label">${t('shipTo', translations.shipTo)}</div>
+            <div class="party-name">${order.business_name}</div>
+            <div class="party-details">
+              ${order.delivery_address || ''}<br>
+              ${order.delivery_city || ''}
+              ${order.delivery_phone ? '<br>' + order.delivery_phone : ''}
+            </div>
+          </div>
+          ` : ''}
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>${t('description', translations.description)}</th>
+              <th class="text-right">${t('quantity', translations.quantity)}</th>
+              <th class="text-right">${t('unitPrice', translations.unitPrice)}</th>
+              <th class="text-right">${t('amount', translations.amount)}</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items.map(item => `
+              <tr>
+                <td>
+                  <strong>${item.product_name}</strong>
+                  ${item.product_sku ? `<br><small style="color: #666;">SKU: ${item.product_sku}</small>` : ''}
+                </td>
+                <td class="text-right">${item.quantity}</td>
+                <td class="text-right">$${item.unit_price.toFixed(2)}</td>
+                <td class="text-right">$${item.total_price.toFixed(2)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <div class="totals">
+          <div class="totals-row">
+            <span>${t('subtotal', translations.subtotal)}</span>
+            <span>$${order.subtotal.toFixed(2)}</span>
+          </div>
+          ${order.delivery_fee > 0 ? `
+          <div class="totals-row">
+            <span>${t('deliveryFee', translations.deliveryFee)}</span>
+            <span>$${order.delivery_fee.toFixed(2)}</span>
+          </div>
+          ` : ''}
+          <div class="totals-row total">
+            <span>${t('total', translations.total)}</span>
+            <span>$${order.total_amount.toFixed(2)}</span>
+          </div>
+          ${order.amount_paid > 0 ? `
+          <div class="totals-row" style="border-bottom: none;">
+            <span style="color: #16a34a;">${t('paid', translations.paid)}</span>
+            <span style="color: #16a34a;">-$${order.amount_paid.toFixed(2)}</span>
+          </div>
+          <div class="totals-row" style="font-weight: bold; border-bottom: none;">
+            <span>Balance Due</span>
+            <span>$${(order.total_amount - order.amount_paid).toFixed(2)}</span>
+          </div>
+          ` : ''}
+        </div>
+
+        <div class="footer">
+          <p>${t('thankYou', translations.thankYou)}</p>
+        </div>
+
+        <div class="no-print" style="text-align: center; margin-top: 30px;">
+          <button onclick="window.print()" style="padding: 12px 24px; background: #6366f1; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
+            Print / Save as PDF
+          </button>
+        </div>
+      </body>
+      </html>
+    `
+
+    invoiceWindow.document.write(invoiceHTML)
+    invoiceWindow.document.close()
+  }
+
+  const generatePackingSlip = () => {
+    if (!order) return
+
+    const packingWindow = window.open('', '_blank')
+    if (!packingWindow) return
+
+    const packingHTML = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${t('packingSlip', translations.packingSlip)} - ${order.order_number}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; padding: 40px; }
+          .header { display: flex; justify-content: space-between; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #333; }
+          .title { font-size: 28px; font-weight: bold; }
+          .order-info { text-align: right; }
+          .order-info p { margin: 4px 0; }
+          .order-number { font-size: 18px; font-weight: bold; }
+          .sections { display: flex; gap: 40px; margin-bottom: 30px; }
+          .section { flex: 1; }
+          .section-label { font-size: 12px; font-weight: bold; text-transform: uppercase; color: #666; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #ddd; }
+          .section-content { font-size: 14px; line-height: 1.6; }
+          .section-content strong { display: block; font-size: 16px; margin-bottom: 4px; }
+          .packing-info { display: flex; gap: 20px; margin-bottom: 30px; padding: 15px; background: #f5f5f5; border-radius: 8px; }
+          .packing-info-item { display: flex; gap: 8px; }
+          .packing-info-item label { font-weight: bold; }
+          .packing-info-item span { color: #666; }
+          .packing-info-item input { border: 1px solid #999; padding: 4px 8px; width: 200px; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+          th { background: #333; color: white; padding: 12px; text-align: left; font-size: 12px; font-weight: bold; text-transform: uppercase; }
+          td { padding: 12px; border-bottom: 1px solid #ddd; vertical-align: top; }
+          .checkbox { width: 24px; height: 24px; border: 2px solid #333; display: inline-block; vertical-align: middle; }
+          .qty-box { display: inline-flex; align-items: center; gap: 8px; background: #f0f0f0; padding: 4px 12px; border-radius: 4px; font-weight: bold; }
+          .sku { color: #666; font-size: 12px; margin-top: 4px; }
+          .notes-section { padding: 15px; border: 2px dashed #999; border-radius: 8px; margin-bottom: 20px; }
+          .notes-section h3 { font-size: 14px; text-transform: uppercase; color: #666; margin-bottom: 8px; }
+          .notes-content { min-height: 60px; font-size: 14px; }
+          .footer { text-align: center; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #666; }
+          @media print {
+            body { padding: 20px; }
+            .no-print { display: none; }
+            .packing-info { background: white; border: 1px solid #ddd; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <div class="title">${t('packingSlip', translations.packingSlip)}</div>
+          </div>
+          <div class="order-info">
+            <p class="order-number">#${order.order_number}</p>
+            <p>${new Date(order.created_at).toLocaleDateString()}</p>
+            <p style="margin-top: 8px;">
+              <span style="display: inline-block; padding: 4px 12px; background: ${order.fulfillment_type === 'delivery' ? '#dbeafe' : '#f3e8ff'}; color: ${order.fulfillment_type === 'delivery' ? '#1d4ed8' : '#7c3aed'}; border-radius: 9999px; font-size: 12px; font-weight: bold;">
+                ${order.fulfillment_type === 'delivery' ? t('delivery', translations.delivery) : t('pickup', translations.pickup)}
+              </span>
+            </p>
+          </div>
+        </div>
+
+        <div class="sections">
+          <div class="section">
+            <div class="section-label">${t('billTo', translations.billTo)}</div>
+            <div class="section-content">
+              <strong>${order.business_name}</strong>
+              ${order.ordered_by_name ? order.ordered_by_name + '<br>' : ''}
+              ${order.delivery_phone ? order.delivery_phone : ''}
+            </div>
+          </div>
+          <div class="section">
+            <div class="section-label">${order.fulfillment_type === 'delivery' ? t('shipTo', translations.shipTo) : t('pickup', translations.pickup)}</div>
+            <div class="section-content">
+              ${order.fulfillment_type === 'delivery' ? `
+                <strong>${order.business_name}</strong>
+                ${order.delivery_address || ''}<br>
+                ${order.delivery_city || ''}
+              ` : `
+                <strong>${order.pickup_location || 'Store Pickup'}</strong>
+                ${order.pickup_date ? order.pickup_date + ' ' + (order.pickup_time || '') : ''}
+              `}
+            </div>
+          </div>
+        </div>
+
+        <div class="packing-info">
+          <div class="packing-info-item">
+            <label>${t('packedBy', translations.packedBy)}</label>
+            <input type="text" placeholder="Name..." />
+          </div>
+          <div class="packing-info-item">
+            <label>${t('dateTime', translations.dateTime)}</label>
+            <span>${new Date().toLocaleString()}</span>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 40px;"><span class="checkbox"></span></th>
+              <th>${t('itemChecklist', translations.itemChecklist)}</th>
+              <th style="width: 100px; text-align: center;">${t('quantity', translations.quantity)}</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items.map(item => `
+              <tr>
+                <td style="text-align: center;"><span class="checkbox"></span></td>
+                <td>
+                  <strong>${item.product_name}</strong>
+                  ${item.product_sku ? `<div class="sku">SKU: ${item.product_sku}</div>` : ''}
+                  ${item.unit_of_measure ? `<div class="sku">${item.unit_of_measure}</div>` : ''}
+                </td>
+                <td style="text-align: center;">
+                  <span class="qty-box">${item.quantity}</span>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <div class="notes-section">
+          <h3>${t('specialInstructions', translations.specialInstructions)}</h3>
+          <div class="notes-content">
+            ${order.business_notes || order.delivery_notes || '<em style="color: #999;">None</em>'}
+          </div>
+        </div>
+
+        <div class="footer">
+          <p>Total Items: ${items.reduce((sum, item) => sum + item.quantity, 0)} | Order: ${order.order_number}</p>
+        </div>
+
+        <div class="no-print" style="text-align: center; margin-top: 30px;">
+          <button onclick="window.print()" style="padding: 12px 24px; background: #333; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
+            Print Packing Slip
+          </button>
+        </div>
+      </body>
+      </html>
+    `
+
+    packingWindow.document.write(packingHTML)
+    packingWindow.document.close()
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -291,7 +606,27 @@ export default function OrderDetailPage() {
             <div>
               <p className="text-purple-200 text-sm">Order from</p>
               <h1 className="text-xl font-bold">{order.business_name}</h1>
-              <p className="text-purple-200 text-sm mt-1">{order.order_number}</p>
+              <div className="flex items-center gap-2 mt-1">
+                <p className="text-purple-200 text-sm">{order.order_number}</p>
+                <button
+                  onClick={generateInvoice}
+                  className="inline-flex items-center gap-1 px-2 py-1 bg-white/20 hover:bg-white/30 rounded text-xs font-medium transition-colors"
+                >
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  {t('downloadInvoice', translations.downloadInvoice)}
+                </button>
+                <button
+                  onClick={generatePackingSlip}
+                  className="inline-flex items-center gap-1 px-2 py-1 bg-white/20 hover:bg-white/30 rounded text-xs font-medium transition-colors"
+                >
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                  </svg>
+                  {t('printPackingSlip', translations.printPackingSlip)}
+                </button>
+              </div>
             </div>
             <div className="text-right">
               <p className="text-2xl font-bold">${order.total_amount.toFixed(2)}</p>

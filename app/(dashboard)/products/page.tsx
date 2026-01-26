@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { getSupplierId } from '@/lib/getSupplier'
 import Pagination from '@/components/Pagination'
+import ProductImportExport from '@/components/ProductImportExport'
 
 const translations = {
   products: { en: 'Products', fr: 'Produits', ht: 'Pwodui', es: 'Productos' },
@@ -35,6 +36,18 @@ const translations = {
   price: { en: 'Price', fr: 'Prix', ht: 'Pri', es: 'Precio' },
   status: { en: 'Status', fr: 'Statut', ht: 'Estati', es: 'Estado' },
   actions: { en: 'Actions', fr: 'Actions', ht: 'Aksyon', es: 'Acciones' },
+  bulkActions: { en: 'Bulk Actions', fr: 'Actions groupées', ht: 'Aksyon an gwoup', es: 'Acciones masivas' },
+  selected: { en: 'selected', fr: 'sélectionné(s)', ht: 'chwazi', es: 'seleccionado(s)' },
+  selectAll: { en: 'Select All', fr: 'Tout sélectionner', ht: 'Chwazi tout', es: 'Seleccionar todo' },
+  deselectAll: { en: 'Deselect All', fr: 'Tout désélectionner', ht: 'Deseleksyone tout', es: 'Deseleccionar todo' },
+  activate: { en: 'Activate', fr: 'Activer', ht: 'Aktive', es: 'Activar' },
+  deactivate: { en: 'Deactivate', fr: 'Désactiver', ht: 'Dezaktive', es: 'Desactivar' },
+  delete: { en: 'Delete', fr: 'Supprimer', ht: 'Efase', es: 'Eliminar' },
+  confirmDelete: { en: 'Are you sure you want to delete the selected products?', fr: 'Voulez-vous vraiment supprimer les produits sélectionnés?', ht: 'Èske ou sèten ou vle efase pwodui chwazi yo?', es: '¿Está seguro de eliminar los productos seleccionados?' },
+  bulkActivateSuccess: { en: 'Products activated successfully', fr: 'Produits activés', ht: 'Pwodui yo aktive', es: 'Productos activados' },
+  bulkDeactivateSuccess: { en: 'Products deactivated successfully', fr: 'Produits désactivés', ht: 'Pwodui yo dezaktive', es: 'Productos desactivados' },
+  bulkDeleteSuccess: { en: 'Products deleted successfully', fr: 'Produits supprimés', ht: 'Pwodui yo efase', es: 'Productos eliminados' },
+  cancel: { en: 'Cancel', fr: 'Annuler', ht: 'Anile', es: 'Cancelar' },
 }
 
 interface Product {
@@ -61,6 +74,9 @@ export default function ProductsPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [stockFilter, setStockFilter] = useState('all')
   const [currentPage, setCurrentPage] = useState(1)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [bulkActionLoading, setBulkActionLoading] = useState(false)
   const { t } = useLanguage()
 
   useEffect(() => {
@@ -139,6 +155,85 @@ export default function ProductsPage() {
     return { label: t('inStock', translations.inStock), color: 'bg-green-100 text-green-800', dot: 'bg-green-500' }
   }
 
+  // Bulk action handlers
+  const toggleSelectAll = () => {
+    if (selectedIds.length === paginatedProducts.length) {
+      setSelectedIds([])
+    } else {
+      setSelectedIds(paginatedProducts.map(p => p.id))
+    }
+  }
+
+  const toggleSelectProduct = (productId: string) => {
+    if (selectedIds.includes(productId)) {
+      setSelectedIds(selectedIds.filter(id => id !== productId))
+    } else {
+      setSelectedIds([...selectedIds, productId])
+    }
+  }
+
+  const handleBulkActivate = async () => {
+    if (selectedIds.length === 0) return
+    setBulkActionLoading(true)
+    try {
+      const supabase = createClient()
+      await supabase
+        .from('platform_supplier_products')
+        .update({ is_active: true })
+        .in('id', selectedIds)
+
+      setProducts(products.map(p =>
+        selectedIds.includes(p.id) ? { ...p, is_active: true } : p
+      ))
+      setSelectedIds([])
+    } catch (error) {
+      console.error('Error activating products:', error)
+    } finally {
+      setBulkActionLoading(false)
+    }
+  }
+
+  const handleBulkDeactivate = async () => {
+    if (selectedIds.length === 0) return
+    setBulkActionLoading(true)
+    try {
+      const supabase = createClient()
+      await supabase
+        .from('platform_supplier_products')
+        .update({ is_active: false })
+        .in('id', selectedIds)
+
+      setProducts(products.map(p =>
+        selectedIds.includes(p.id) ? { ...p, is_active: false } : p
+      ))
+      setSelectedIds([])
+    } catch (error) {
+      console.error('Error deactivating products:', error)
+    } finally {
+      setBulkActionLoading(false)
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return
+    setBulkActionLoading(true)
+    try {
+      const supabase = createClient()
+      await supabase
+        .from('platform_supplier_products')
+        .delete()
+        .in('id', selectedIds)
+
+      setProducts(products.filter(p => !selectedIds.includes(p.id)))
+      setSelectedIds([])
+      setShowDeleteModal(false)
+    } catch (error) {
+      console.error('Error deleting products:', error)
+    } finally {
+      setBulkActionLoading(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -150,17 +245,29 @@ export default function ProductsPage() {
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <h1 className="text-2xl font-bold text-gray-900">{t('products', translations.products)}</h1>
-        <Link
-          href="/products/new"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium"
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          {t('addProduct', translations.addProduct)}
-        </Link>
+        <div className="flex flex-wrap items-center gap-3">
+          <ProductImportExport
+            products={products.map(p => ({
+              ...p,
+              description: null,
+              cost_price: null,
+              unit_of_measure: null,
+              minimum_order_quantity: 1,
+            }))}
+            onImportComplete={loadProducts}
+          />
+          <Link
+            href="/products/new"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            {t('addProduct', translations.addProduct)}
+          </Link>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -336,6 +443,48 @@ export default function ProductsPage() {
         </p>
       )}
 
+      {/* Bulk Actions Toolbar */}
+      {selectedIds.length > 0 && (
+        <div className="bg-primary-50 border border-primary-200 rounded-lg p-3 mb-4 flex flex-wrap items-center gap-3">
+          <span className="text-sm font-medium text-primary-800">
+            {selectedIds.length} {t('selected', translations.selected)}
+          </span>
+          <div className="flex gap-2 ml-auto">
+            <button
+              type="button"
+              onClick={handleBulkActivate}
+              disabled={bulkActionLoading}
+              className="px-3 py-1.5 text-sm font-medium text-green-700 bg-green-100 rounded-lg hover:bg-green-200 transition-colors disabled:opacity-50"
+            >
+              {t('activate', translations.activate)}
+            </button>
+            <button
+              type="button"
+              onClick={handleBulkDeactivate}
+              disabled={bulkActionLoading}
+              className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+            >
+              {t('deactivate', translations.deactivate)}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowDeleteModal(true)}
+              disabled={bulkActionLoading}
+              className="px-3 py-1.5 text-sm font-medium text-red-700 bg-red-100 rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50"
+            >
+              {t('delete', translations.delete)}
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedIds([])}
+              className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              {t('deselectAll', translations.deselectAll)}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Empty State */}
       {filteredProducts.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-xl border border-gray-100">
@@ -361,8 +510,9 @@ export default function ProductsPage() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {paginatedProducts.map((product) => {
             const stockStatus = getStockStatus(product)
+            const isSelected = selectedIds.includes(product.id)
             return (
-              <div key={product.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow flex flex-col h-full">
+              <div key={product.id} className={`bg-white rounded-xl border overflow-hidden hover:shadow-md transition-shadow flex flex-col h-full ${isSelected ? 'border-primary-500 ring-2 ring-primary-200' : 'border-gray-200'}`}>
                 {/* Product Image - Fixed Height */}
                 <div className="h-40 bg-gray-100 relative flex-shrink-0">
                   {product.image_url ? (
@@ -374,6 +524,20 @@ export default function ProductsPage() {
                       </svg>
                     </div>
                   )}
+                  {/* Selection Checkbox */}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); toggleSelectProduct(product.id); }}
+                    className={`absolute top-2 right-2 w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${
+                      isSelected ? 'bg-primary-600 border-primary-600' : 'bg-white/80 border-gray-300 hover:border-primary-500'
+                    }`}
+                  >
+                    {isSelected && (
+                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </button>
                   {/* Status Badge */}
                   {!product.is_active && (
                     <span className="absolute top-2 left-2 px-2 py-0.5 bg-gray-800 text-white text-xs font-medium rounded">
@@ -422,6 +586,23 @@ export default function ProductsPage() {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
+                  <th className="px-4 py-3 text-left">
+                    <button
+                      type="button"
+                      onClick={toggleSelectAll}
+                      className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                        selectedIds.length === paginatedProducts.length && paginatedProducts.length > 0
+                          ? 'bg-primary-600 border-primary-600'
+                          : 'bg-white border-gray-300 hover:border-primary-500'
+                      }`}
+                    >
+                      {selectedIds.length === paginatedProducts.length && paginatedProducts.length > 0 && (
+                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </button>
+                  </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('product', translations.product)}</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('categories', translations.categories)}</th>
@@ -434,8 +615,24 @@ export default function ProductsPage() {
               <tbody className="divide-y divide-gray-100">
                 {paginatedProducts.map((product) => {
                   const stockStatus = getStockStatus(product)
+                  const isSelected = selectedIds.includes(product.id)
                   return (
-                    <tr key={product.id} className="hover:bg-gray-50">
+                    <tr key={product.id} className={`hover:bg-gray-50 ${isSelected ? 'bg-primary-50' : ''}`}>
+                      <td className="px-4 py-3">
+                        <button
+                          type="button"
+                          onClick={() => toggleSelectProduct(product.id)}
+                          className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                            isSelected ? 'bg-primary-600 border-primary-600' : 'bg-white border-gray-300 hover:border-primary-500'
+                          }`}
+                        >
+                          {isSelected && (
+                            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </button>
+                      </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
@@ -503,6 +700,44 @@ export default function ProductsPage() {
           onPageChange={setCurrentPage}
           className="mt-6"
         />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">{t('delete', translations.delete)} ({selectedIds.length})</h3>
+            </div>
+            <p className="text-gray-600 mb-6">{t('confirmDelete', translations.confirmDelete)}</p>
+            <div className="flex gap-3 justify-end">
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                disabled={bulkActionLoading}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+              >
+                {t('cancel', translations.cancel)}
+              </button>
+              <button
+                type="button"
+                onClick={handleBulkDelete}
+                disabled={bulkActionLoading}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {bulkActionLoading && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                )}
+                {t('delete', translations.delete)}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

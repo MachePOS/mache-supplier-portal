@@ -58,6 +58,18 @@ const translations = {
   specificProducts: { en: 'Specific Products', fr: 'Produits spécifiques', ht: 'Pwodui espesifik', es: 'Productos específicos' },
   specificProductsDesc: { en: 'Select individual products', fr: 'Sélectionnez des produits individuels', ht: 'Chwazi pwodui endividyèl', es: 'Seleccione productos individuales' },
   selectProductsError: { en: 'Please select at least one product', fr: 'Veuillez sélectionner au moins un produit', ht: 'Tanpri chwazi omwen yon pwodui', es: 'Por favor seleccione al menos un producto' },
+  promoCodeSettings: { en: 'Promo Code & Limits', fr: 'Code promo et limites', ht: 'Kòd pwomo ak limit', es: 'Código promocional y límites' },
+  promoCode: { en: 'Promo Code', fr: 'Code promo', ht: 'Kòd pwomo', es: 'Código promocional' },
+  promoCodePlaceholder: { en: 'e.g., SUMMER20', fr: 'ex: ETE20', ht: 'egz: ETE20', es: 'ej: VERANO20' },
+  promoCodeDesc: { en: 'Optional code customers must enter to get this deal', fr: 'Code optionnel que les clients doivent entrer', ht: 'Kòd opsyonèl kliyan dwe antre', es: 'Código opcional que los clientes deben ingresar' },
+  requiresPromoCode: { en: 'Require Promo Code', fr: 'Exiger un code promo', ht: 'Mande kòd pwomo', es: 'Requerir código promocional' },
+  requiresPromoCodeDesc: { en: 'Customers must enter the promo code to use this deal', fr: 'Les clients doivent entrer le code promo', ht: 'Kliyan dwe antre kòd pwomo a', es: 'Los clientes deben ingresar el código' },
+  usageLimit: { en: 'Total Usage Limit', fr: 'Limite d\'utilisation totale', ht: 'Limit itilizasyon total', es: 'Límite de uso total' },
+  usageLimitDesc: { en: 'Maximum number of times this deal can be used (leave empty for unlimited)', fr: 'Nombre maximum d\'utilisations (vide = illimité)', ht: 'Kantite maksimòm fwa yo ka itilize òf la', es: 'Número máximo de usos (vacío = ilimitado)' },
+  usageLimitPerCustomer: { en: 'Limit Per Customer', fr: 'Limite par client', ht: 'Limit pa kliyan', es: 'Límite por cliente' },
+  usageLimitPerCustomerDesc: { en: 'Maximum times a single customer can use this deal', fr: 'Nombre maximum par client', ht: 'Kantite maksimòm pa kliyan', es: 'Máximo de usos por cliente' },
+  unlimited: { en: 'Unlimited', fr: 'Illimité', ht: 'San limit', es: 'Ilimitado' },
+  currentUsage: { en: 'Current Usage', fr: 'Utilisation actuelle', ht: 'Itilizasyon aktyèl', es: 'Uso actual' },
 }
 
 const dealTypes = [
@@ -103,6 +115,11 @@ export default function EditDealPage() {
     badge_text: '',
     badge_color: 'red',
     applies_to: 'all_products' as 'all_products' | 'specific_products',
+    promo_code: '',
+    requires_promo_code: false,
+    usage_limit: '',
+    usage_limit_per_customer: '',
+    current_usage_count: 0,
   })
 
   useEffect(() => {
@@ -166,6 +183,11 @@ export default function EditDealPage() {
         badge_text: deal.badge_text || '',
         badge_color: deal.badge_color || 'red',
         applies_to: deal.applies_to || 'all_products',
+        promo_code: deal.promo_code || '',
+        requires_promo_code: deal.requires_promo_code || false,
+        usage_limit: deal.usage_limit?.toString() || '',
+        usage_limit_per_customer: deal.usage_limit_per_customer?.toString() || '',
+        current_usage_count: deal.current_usage_count || 0,
       })
     } catch (err) {
       console.error('Error loading deal:', err)
@@ -208,6 +230,10 @@ export default function EditDealPage() {
         badge_text: formData.badge_text || null,
         badge_color: formData.badge_color,
         applies_to: formData.applies_to,
+        promo_code: formData.promo_code?.toUpperCase() || null,
+        requires_promo_code: formData.requires_promo_code,
+        usage_limit: formData.usage_limit ? parseInt(formData.usage_limit) : null,
+        usage_limit_per_customer: formData.usage_limit_per_customer ? parseInt(formData.usage_limit_per_customer) : null,
       }
 
       const { error: updateError } = await supabase
@@ -537,6 +563,93 @@ export default function EditDealPage() {
                 <span className="text-sm text-gray-700">{t('freeDelivery', translations.freeDelivery)}</span>
               </label>
             </div>
+          </div>
+        </div>
+
+        {/* Promo Code & Usage Limits */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('promoCodeSettings', translations.promoCodeSettings)}</h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {t('promoCode', translations.promoCode)}
+              </label>
+              <input
+                type="text"
+                value={formData.promo_code}
+                onChange={(e) => setFormData({ ...formData, promo_code: e.target.value.toUpperCase() })}
+                placeholder={t('promoCodePlaceholder', translations.promoCodePlaceholder)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 uppercase font-mono"
+                maxLength={50}
+              />
+              <p className="text-xs text-gray-500 mt-1">{t('promoCodeDesc', translations.promoCodeDesc)}</p>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.requires_promo_code}
+                  onChange={(e) => setFormData({ ...formData, requires_promo_code: e.target.checked })}
+                  className="w-5 h-5 mt-0.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  disabled={!formData.promo_code}
+                />
+                <div>
+                  <span className={`text-sm font-medium ${formData.promo_code ? 'text-gray-700' : 'text-gray-400'}`}>
+                    {t('requiresPromoCode', translations.requiresPromoCode)}
+                  </span>
+                  <p className="text-xs text-gray-500">{t('requiresPromoCodeDesc', translations.requiresPromoCodeDesc)}</p>
+                </div>
+              </label>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {t('usageLimit', translations.usageLimit)}
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={formData.usage_limit}
+                onChange={(e) => setFormData({ ...formData, usage_limit: e.target.value })}
+                placeholder={t('unlimited', translations.unlimited)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">{t('usageLimitDesc', translations.usageLimitDesc)}</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {t('usageLimitPerCustomer', translations.usageLimitPerCustomer)}
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={formData.usage_limit_per_customer}
+                onChange={(e) => setFormData({ ...formData, usage_limit_per_customer: e.target.value })}
+                placeholder={t('unlimited', translations.unlimited)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">{t('usageLimitPerCustomerDesc', translations.usageLimitPerCustomerDesc)}</p>
+            </div>
+
+            {formData.usage_limit && formData.current_usage_count > 0 && (
+              <div className="md:col-span-2 bg-gray-50 rounded-lg p-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">{t('currentUsage', translations.currentUsage)}</span>
+                  <span className="font-medium text-gray-900">
+                    {formData.current_usage_count} / {formData.usage_limit}
+                  </span>
+                </div>
+                <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary-500 rounded-full transition-all"
+                    style={{ width: `${Math.min((formData.current_usage_count / parseInt(formData.usage_limit)) * 100, 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

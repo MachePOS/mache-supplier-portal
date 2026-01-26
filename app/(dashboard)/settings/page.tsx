@@ -5,10 +5,33 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { getSupplierInfo } from '@/lib/getSupplier'
+import PasswordStrength, { checkPasswordStrength } from '@/components/PasswordStrength'
 
 const translations = {
   settings: { en: 'Settings', fr: 'Paramètres', ht: 'Paramèt', es: 'Configuración' },
   businessProfile: { en: 'Business Profile', fr: 'Profil d\'entreprise', ht: 'Pwofil biznis', es: 'Perfil de negocio' },
+  security: { en: 'Security', fr: 'Sécurité', ht: 'Sekirite', es: 'Seguridad' },
+  changePassword: { en: 'Change Password', fr: 'Changer le mot de passe', ht: 'Chanje modpas', es: 'Cambiar contraseña' },
+  currentPassword: { en: 'Current Password', fr: 'Mot de passe actuel', ht: 'Modpas aktyèl', es: 'Contraseña actual' },
+  newPassword: { en: 'New Password', fr: 'Nouveau mot de passe', ht: 'Nouvo modpas', es: 'Nueva contraseña' },
+  confirmNewPassword: { en: 'Confirm New Password', fr: 'Confirmer le nouveau mot de passe', ht: 'Konfime nouvo modpas', es: 'Confirmar nueva contraseña' },
+  passwordRequirement: { en: 'Password must be at least 6 characters', fr: 'Le mot de passe doit contenir au moins 6 caractères', ht: 'Modpas dwe gen omwen 6 karaktè', es: 'La contraseña debe tener al menos 6 caracteres' },
+  changingPassword: { en: 'Changing...', fr: 'Modification...', ht: 'Ap chanje...', es: 'Cambiando...' },
+  passwordChanged: { en: 'Password changed successfully', fr: 'Mot de passe modifié avec succès', ht: 'Modpas chanje avèk siksè', es: 'Contraseña cambiada con éxito' },
+  passwordMismatch: { en: 'Passwords do not match', fr: 'Les mots de passe ne correspondent pas', ht: 'Modpas yo pa menm', es: 'Las contraseñas no coinciden' },
+  passwordTooShort: { en: 'Password must be at least 8 characters with uppercase, lowercase and number', fr: 'Le mot de passe doit contenir au moins 8 caractères avec majuscule, minuscule et chiffre', ht: 'Modpas dwe gen omwen 8 karaktè ak majiskil, miniskil ak nimewo', es: 'La contraseña debe tener al menos 8 caracteres con mayúscula, minúscula y número' },
+  businessHours: { en: 'Business Hours', fr: 'Heures d\'ouverture', ht: 'Lè travay', es: 'Horario de atención' },
+  businessHoursHelp: { en: 'Set your operating hours for each day', fr: 'Définissez vos heures d\'ouverture pour chaque jour', ht: 'Mete lè travay ou pou chak jou', es: 'Establece tu horario de atención para cada día' },
+  closed: { en: 'Closed', fr: 'Fermé', ht: 'Fèmen', es: 'Cerrado' },
+  monday: { en: 'Monday', fr: 'Lundi', ht: 'Lendi', es: 'Lunes' },
+  tuesday: { en: 'Tuesday', fr: 'Mardi', ht: 'Madi', es: 'Martes' },
+  wednesday: { en: 'Wednesday', fr: 'Mercredi', ht: 'Mèkredi', es: 'Miércoles' },
+  thursday: { en: 'Thursday', fr: 'Jeudi', ht: 'Jedi', es: 'Jueves' },
+  friday: { en: 'Friday', fr: 'Vendredi', ht: 'Vandredi', es: 'Viernes' },
+  saturday: { en: 'Saturday', fr: 'Samedi', ht: 'Samdi', es: 'Sábado' },
+  sunday: { en: 'Sunday', fr: 'Dimanche', ht: 'Dimanch', es: 'Domingo' },
+  currentPasswordRequired: { en: 'Current password is required', fr: 'Le mot de passe actuel est requis', ht: 'Modpas aktyèl la obligatwa', es: 'Se requiere la contraseña actual' },
+  currentPasswordIncorrect: { en: 'Current password is incorrect', fr: 'Le mot de passe actuel est incorrect', ht: 'Modpas aktyèl la pa kòrèk', es: 'La contraseña actual es incorrecta' },
   businessInfo: { en: 'Business Information', fr: 'Informations commerciales', ht: 'Enfòmasyon biznis', es: 'Información del negocio' },
   name: { en: 'Business Name', fr: 'Nom de l\'entreprise', ht: 'Non biznis', es: 'Nombre del negocio' },
   description: { en: 'Description', fr: 'Description', ht: 'Deskripsyon', es: 'Descripción' },
@@ -50,6 +73,22 @@ export default function SettingsPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
   const [supplierId, setSupplierId] = useState<string | null>(null)
 
+  // Password change state
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [changingPassword, setChangingPassword] = useState(false)
+
+  const defaultBusinessHours = {
+    monday: { open: '08:00', close: '17:00', closed: false },
+    tuesday: { open: '08:00', close: '17:00', closed: false },
+    wednesday: { open: '08:00', close: '17:00', closed: false },
+    thursday: { open: '08:00', close: '17:00', closed: false },
+    friday: { open: '08:00', close: '17:00', closed: false },
+    saturday: { open: '09:00', close: '14:00', closed: false },
+    sunday: { open: '', close: '', closed: true },
+  }
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -68,6 +107,7 @@ export default function SettingsPage() {
     logo_url: '',
     banner_url: '',
     is_featured: false,
+    business_hours: defaultBusinessHours,
   })
 
   useEffect(() => {
@@ -115,6 +155,7 @@ export default function SettingsPage() {
         logo_url: supplier.logo_url || '',
         banner_url: supplier.banner_url || '',
         is_featured: supplier.is_featured || false,
+        business_hours: supplier.business_hours || defaultBusinessHours,
       })
     } catch (error) {
       console.error('Error loading settings:', error)
@@ -141,6 +182,19 @@ export default function SettingsPage() {
         [name]: value
       }))
     }
+  }
+
+  const handleBusinessHoursChange = (day: string, field: 'open' | 'close' | 'closed', value: string | boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      business_hours: {
+        ...prev.business_hours,
+        [day]: {
+          ...prev.business_hours[day as keyof typeof prev.business_hours],
+          [field]: value,
+        }
+      }
+    }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -170,6 +224,7 @@ export default function SettingsPage() {
         logo_url: formData.logo_url || null,
         banner_url: formData.banner_url || null,
         is_featured: formData.is_featured,
+        business_hours: formData.business_hours,
       }
 
       const { error: updateError } = await supabase
@@ -184,6 +239,69 @@ export default function SettingsPage() {
       setMessage({ type: 'error', text: err.message || t('error', translations.error) })
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleChangePassword = async () => {
+    // Validate inputs
+    if (!currentPassword) {
+      setMessage({ type: 'error', text: t('currentPasswordRequired', translations.currentPasswordRequired) })
+      return
+    }
+
+    // Use password strength checker
+    const { strength } = checkPasswordStrength(newPassword)
+    if (strength === 'weak') {
+      setMessage({ type: 'error', text: t('passwordTooShort', translations.passwordTooShort) })
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      setMessage({ type: 'error', text: t('passwordMismatch', translations.passwordMismatch) })
+      return
+    }
+
+    setChangingPassword(true)
+    setMessage(null)
+
+    try {
+      const supabase = createClient()
+
+      // First, verify the current password by re-authenticating
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user?.email) {
+        throw new Error('Unable to verify user')
+      }
+
+      // Try to sign in with current password to verify it
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword,
+      })
+
+      if (signInError) {
+        setMessage({ type: 'error', text: t('currentPasswordIncorrect', translations.currentPasswordIncorrect) })
+        setChangingPassword(false)
+        return
+      }
+
+      // Update to new password
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword,
+      })
+
+      if (updateError) throw updateError
+
+      setMessage({ type: 'success', text: t('passwordChanged', translations.passwordChanged) })
+
+      // Clear password fields
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err.message || 'Failed to change password' })
+    } finally {
+      setChangingPassword(false)
     }
   }
 
@@ -386,6 +504,52 @@ export default function SettingsPage() {
                 </div>
               </div>
             </div>
+
+            {/* Business Hours */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                <svg className="w-4 h-4 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {t('businessHours', translations.businessHours)}
+              </h3>
+              <p className="text-xs text-gray-500 mb-3">{t('businessHoursHelp', translations.businessHoursHelp)}</p>
+              <div className="space-y-2">
+                {(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const).map((day) => (
+                  <div key={day} className="flex items-center gap-2 py-1">
+                    <span className="w-20 text-xs font-medium text-gray-700 capitalize">
+                      {t(day, translations[day])}
+                    </span>
+                    <label className="flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.business_hours[day]?.closed || false}
+                        onChange={(e) => handleBusinessHoursChange(day, 'closed', e.target.checked)}
+                        className="w-3.5 h-3.5 text-gray-500 border-gray-300 rounded focus:ring-gray-400"
+                      />
+                      <span className="text-xs text-gray-500">{t('closed', translations.closed)}</span>
+                    </label>
+                    {!formData.business_hours[day]?.closed && (
+                      <>
+                        <input
+                          type="time"
+                          value={formData.business_hours[day]?.open || ''}
+                          onChange={(e) => handleBusinessHoursChange(day, 'open', e.target.value)}
+                          className="px-2 py-0.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                        />
+                        <span className="text-xs text-gray-400">-</span>
+                        <input
+                          type="time"
+                          value={formData.business_hours[day]?.close || ''}
+                          onChange={(e) => handleBusinessHoursChange(day, 'close', e.target.value)}
+                          className="px-2 py-0.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                        />
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Right Column */}
@@ -535,6 +699,66 @@ export default function SettingsPage() {
           </div>
         </div>
       </form>
+
+      {/* Security Section */}
+      <div className="mt-6 bg-white rounded-xl border border-gray-100 p-5">
+        <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <svg className="w-4 h-4 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+          {t('security', translations.security)}
+        </h3>
+        <div className="max-w-md space-y-4">
+          <p className="text-sm text-gray-500 mb-4">{t('changePassword', translations.changePassword)}</p>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              {t('currentPassword', translations.currentPassword)}
+            </label>
+            <input
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              placeholder={t('currentPassword', translations.currentPassword)}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              {t('newPassword', translations.newPassword)}
+            </label>
+            <input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              placeholder={t('newPassword', translations.newPassword)}
+            />
+            <PasswordStrength password={newPassword} className="mt-2" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              {t('confirmNewPassword', translations.confirmNewPassword)}
+            </label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              placeholder={t('confirmNewPassword', translations.confirmNewPassword)}
+            />
+          </div>
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={handleChangePassword}
+              disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword}
+              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+            >
+              {changingPassword ? t('changingPassword', translations.changingPassword) : t('changePassword', translations.changePassword)}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

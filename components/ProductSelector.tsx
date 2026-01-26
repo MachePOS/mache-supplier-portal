@@ -94,7 +94,8 @@ export default function ProductSelector({ selectedProductIds, onSelectionChange,
 
   const selectAll = () => {
     const allIds = filteredProducts.map(p => p.id)
-    const uniqueIds = [...new Set([...selectedProductIds, ...allIds])]
+    const combined = [...selectedProductIds, ...allIds]
+    const uniqueIds = combined.filter((id, index) => combined.indexOf(id) === index)
     onSelectionChange(uniqueIds)
   }
 

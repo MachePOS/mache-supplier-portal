@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useLanguage } from '@/contexts/LanguageContext'
+import RevenueChart from '@/components/RevenueChart'
 
 const translations = {
   analytics: { en: 'Analytics & Reports', fr: 'Analytique et rapports', ht: 'Analitik ak rapò', es: 'Análisis e informes' },
@@ -36,6 +37,7 @@ const translations = {
   lastPayout: { en: 'Last Payout', fr: 'Dernier paiement', ht: 'Dènye peman', es: 'Último pago' },
   totalPaid: { en: 'Total Paid Out', fr: 'Total payé', ht: 'Total peye', es: 'Total pagado' },
   commissionRate: { en: 'Commission Rate', fr: 'Taux de commission', ht: 'To komisyon', es: 'Tasa de comisión' },
+  revenueTrend: { en: 'Revenue Trend', fr: 'Tendance des revenus', ht: 'Tandans revni', es: 'Tendencia de ingresos' },
 }
 
 interface AnalyticsData {
@@ -49,6 +51,8 @@ interface AnalyticsData {
   pendingPayout: number
   lastPayout: { amount: number; date: string } | null
   totalPaidOut: number
+  commissionRate: number
+  dailyRevenue: { date: string; revenue: number; orders: number }[]
 }
 
 export default function AnalyticsPage() {
@@ -66,6 +70,8 @@ export default function AnalyticsPage() {
     pendingPayout: 0,
     lastPayout: null,
     totalPaidOut: 0,
+    commissionRate: 5, // Default 5%
+    dailyRevenue: [],
   })
 
   useEffect(() => {
@@ -95,27 +101,37 @@ export default function AnalyticsPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    // Get supplier ID - try supplier_users first, then fallback to contact_email
+    // Get supplier ID and commission rate - try supplier_users first, then fallback to contact_email
     let supplierId: string | null = null
+    let commissionRate = 5 // Default 5%
 
     const { data: supplierUser } = await supabase
       .from('supplier_users')
-      .select('supplier_id')
+      .select('supplier_id, platform_suppliers(commission_rate)')
       .eq('auth_user_id', user.id)
       .single()
 
     if (supplierUser) {
       supplierId = supplierUser.supplier_id
+      const supplier = Array.isArray(supplierUser.platform_suppliers)
+        ? supplierUser.platform_suppliers[0]
+        : supplierUser.platform_suppliers
+      if (supplier?.commission_rate) {
+        commissionRate = supplier.commission_rate
+      }
     } else {
       // Fallback: check by contact email
       const { data: supplier } = await supabase
         .from('platform_suppliers')
-        .select('id')
+        .select('id, commission_rate')
         .eq('contact_email', user.email)
         .single()
 
       if (supplier) {
         supplierId = supplier.id
+        if (supplier.commission_rate) {
+          commissionRate = supplier.commission_rate
+        }
       }
     }
 
@@ -172,6 +188,35 @@ export default function AnalyticsPage() {
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 5)
 
+    // Calculate daily revenue
+    const dailyStats: Record<string, { revenue: number; orders: number }> = {}
+    orders?.forEach(order => {
+      if (order.status !== 'cancelled') {
+        const dateKey = new Date(order.created_at).toISOString().split('T')[0]
+        if (!dailyStats[dateKey]) {
+          dailyStats[dateKey] = { revenue: 0, orders: 0 }
+        }
+        dailyStats[dateKey].revenue += order.total_amount || 0
+        dailyStats[dateKey].orders += 1
+      }
+    })
+
+    // Fill in missing dates with zeros for the selected range
+    const dailyRevenue: { date: string; revenue: number; orders: number }[] = []
+    const startDate = dateFilter ? new Date(dateFilter) : (orders?.length ? new Date(orders[orders.length - 1].created_at) : new Date())
+    const endDate = new Date()
+    const currentDate = new Date(startDate)
+
+    while (currentDate <= endDate) {
+      const dateKey = currentDate.toISOString().split('T')[0]
+      dailyRevenue.push({
+        date: dateKey,
+        revenue: dailyStats[dateKey]?.revenue || 0,
+        orders: dailyStats[dateKey]?.orders || 0,
+      })
+      currentDate.setDate(currentDate.getDate() + 1)
+    }
+
     // Recent orders
     const recentOrders = orders
       ?.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
@@ -210,6 +255,8 @@ export default function AnalyticsPage() {
       pendingPayout,
       lastPayout,
       totalPaidOut,
+      commissionRate,
+      dailyRevenue,
     })
 
     setLoading(false)
@@ -341,9 +388,15 @@ export default function AnalyticsPage() {
           </div>
           <div>
             <p className="text-sm text-gray-500">{t('commissionRate', translations.commissionRate)}</p>
-            <p className="text-xl font-bold text-gray-900">5%</p>
+            <p className="text-xl font-bold text-gray-900">{analytics.commissionRate}%</p>
           </div>
         </div>
+      </div>
+
+      {/* Revenue Trend Chart */}
+      <div className="bg-white rounded-xl border border-gray-100 p-6 mb-8">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('revenueTrend', translations.revenueTrend)}</h2>
+        <RevenueChart data={analytics.dailyRevenue} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

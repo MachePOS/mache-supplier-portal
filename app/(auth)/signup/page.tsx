@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useLanguage } from '@/contexts/LanguageContext'
+import PasswordStrength, { checkPasswordStrength } from '@/components/PasswordStrength'
 
 const translations = {
   title: { en: 'Become a Supplier', fr: 'Devenir fournisseur', ht: 'Vin yon founisè', es: 'Conviértete en proveedor' },
@@ -69,9 +70,9 @@ export default function SupplierSignupPage() {
       return
     }
 
-    // Password complexity validation: min 8 chars, uppercase, lowercase, number
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/
-    if (!passwordRegex.test(formData.password)) {
+    // Password complexity validation using strength checker
+    const { strength } = checkPasswordStrength(formData.password)
+    if (strength === 'weak') {
       setError(t('passwordLength', translations.passwordLength))
       setLoading(false)
       return
@@ -291,36 +292,36 @@ export default function SupplierSignupPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                  {t('password', translations.password)} *
-                </label>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                  className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  placeholder={t('passwordPlaceholder', translations.passwordPlaceholder)}
-                />
-              </div>
-              <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                  {t('confirmPassword', translations.confirmPassword)} *
-                </label>
-                <input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  required
-                  className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                {t('password', translations.password)} *
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                placeholder={t('passwordPlaceholder', translations.passwordPlaceholder)}
+              />
+              <PasswordStrength password={formData.password} className="mt-2" />
+            </div>
+
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                {t('confirmPassword', translations.confirmPassword)} *
+              </label>
+              <input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                required
+                className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              />
             </div>
 
             <div className="pt-2">

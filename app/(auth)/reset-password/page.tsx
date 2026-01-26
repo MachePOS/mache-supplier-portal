@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useLanguage } from '@/contexts/LanguageContext'
+import PasswordStrength, { checkPasswordStrength } from '@/components/PasswordStrength'
 
 const translations = {
   title: { en: 'Set New Password', fr: 'Définir un nouveau mot de passe', ht: 'Mete yon nouvo modpas', es: 'Establecer nueva contraseña' },
@@ -52,9 +53,9 @@ export default function ResetPasswordPage() {
     e.preventDefault()
     setError('')
 
-    // Password complexity validation: min 8 chars, uppercase, lowercase, number
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/
-    if (!passwordRegex.test(password)) {
+    // Password complexity validation using strength checker
+    const { strength } = checkPasswordStrength(password)
+    if (strength === 'weak') {
       setError(t('passwordTooShort', translations.passwordTooShort))
       return
     }
@@ -170,6 +171,7 @@ export default function ResetPasswordPage() {
                 minLength={8}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
               />
+              <PasswordStrength password={password} className="mt-2" />
             </div>
 
             <div>
