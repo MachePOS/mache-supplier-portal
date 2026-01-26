@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { getSupplierId } from '@/lib/getSupplier'
+import Pagination from '@/components/Pagination'
 
 const translations = {
   products: { en: 'Products', fr: 'Produits', ht: 'Pwodui', es: 'Productos' },
@@ -49,6 +50,7 @@ interface Product {
 }
 
 const LOW_STOCK_THRESHOLD = 10
+const ITEMS_PER_PAGE = 20
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([])
@@ -58,6 +60,7 @@ export default function ProductsPage() {
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [stockFilter, setStockFilter] = useState('all')
+  const [currentPage, setCurrentPage] = useState(1)
   const { t } = useLanguage()
 
   useEffect(() => {
@@ -98,6 +101,11 @@ export default function ProductsPage() {
   const lowStockCount = products.filter(p => p.stock_quantity !== null && p.stock_quantity > 0 && p.stock_quantity <= LOW_STOCK_THRESHOLD).length
   const outOfStockCount = products.filter(p => !p.in_stock || p.stock_quantity === 0).length
 
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, categoryFilter, statusFilter, stockFilter])
+
   // Filter products
   const filteredProducts = products.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -113,6 +121,13 @@ export default function ProductsPage() {
 
     return matchesSearch && matchesCategory && matchesStatus && matchesStock
   })
+
+  // Paginate products
+  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE)
+  const paginatedProducts = filteredProducts.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  )
 
   const getStockStatus = (product: Product) => {
     if (!product.in_stock || product.stock_quantity === 0) {
@@ -344,7 +359,7 @@ export default function ProductsPage() {
       ) : viewMode === 'grid' ? (
         /* Grid View */
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {filteredProducts.map((product) => {
+          {paginatedProducts.map((product) => {
             const stockStatus = getStockStatus(product)
             return (
               <div key={product.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow flex flex-col h-full">
@@ -417,7 +432,7 @@ export default function ProductsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filteredProducts.map((product) => {
+                {paginatedProducts.map((product) => {
                   const stockStatus = getStockStatus(product)
                   return (
                     <tr key={product.id} className="hover:bg-gray-50">
@@ -476,6 +491,18 @@ export default function ProductsPage() {
             </table>
           </div>
         </div>
+      )}
+
+      {/* Pagination */}
+      {filteredProducts.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={filteredProducts.length}
+          itemsPerPage={ITEMS_PER_PAGE}
+          onPageChange={setCurrentPage}
+          className="mt-6"
+        />
       )}
     </div>
   )

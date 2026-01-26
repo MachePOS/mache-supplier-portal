@@ -5,6 +5,9 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { getSupplierId } from '@/lib/getSupplier'
+import Pagination from '@/components/Pagination'
+
+const ITEMS_PER_PAGE = 12
 
 const translations = {
   deals: { en: 'Deals & Promotions', fr: 'Offres et Promotions', ht: 'Òf ak Pwomosyon', es: 'Ofertas y Promociones' },
@@ -79,6 +82,7 @@ export default function DealsPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [dealToDelete, setDealToDelete] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
   const { t, language } = useLanguage()
 
   useEffect(() => {
@@ -177,6 +181,11 @@ export default function DealsPage() {
   const flashSales = deals.filter(d => d.is_flash_sale).length
   const totalViews = deals.reduce((sum, d) => sum + (d.views_count || 0), 0)
 
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, statusFilter, typeFilter])
+
   // Filter deals
   const filteredDeals = deals.filter(deal => {
     const matchesSearch = deal.title.toLowerCase().includes(searchTerm.toLowerCase())
@@ -186,6 +195,13 @@ export default function DealsPage() {
 
     return matchesSearch && matchesStatus && matchesType
   })
+
+  // Paginate deals
+  const totalPages = Math.ceil(filteredDeals.length / ITEMS_PER_PAGE)
+  const paginatedDeals = filteredDeals.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  )
 
   if (loading) {
     return (
@@ -343,7 +359,7 @@ export default function DealsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredDeals.map((deal) => {
+          {paginatedDeals.map((deal) => {
             const status = getDealStatus(deal)
             const timeRemaining = deal.end_date ? getTimeRemaining(deal.end_date) : null
 
@@ -445,6 +461,18 @@ export default function DealsPage() {
             )
           })}
         </div>
+      )}
+
+      {/* Pagination */}
+      {filteredDeals.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={filteredDeals.length}
+          itemsPerPage={ITEMS_PER_PAGE}
+          onPageChange={setCurrentPage}
+          className="mt-6"
+        />
       )}
 
       {/* Delete Modal */}

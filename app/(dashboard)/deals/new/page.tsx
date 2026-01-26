@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { getSupplierId } from '@/lib/getSupplier'
+import ProductSelector from '@/components/ProductSelector'
 
 const translations = {
   createDeal: { en: 'Create Deal', fr: 'Créer une offre', ht: 'Kreye yon òf', es: 'Crear oferta' },
@@ -37,6 +38,13 @@ const translations = {
   saving: { en: 'Creating...', fr: 'Création...', ht: 'Ap kreye...', es: 'Creando...' },
   success: { en: 'Deal created successfully!', fr: 'Offre créée avec succès!', ht: 'Òf kreye avèk siksè!', es: '¡Oferta creada con éxito!' },
   error: { en: 'Error creating deal', fr: 'Erreur lors de la création', ht: 'Erè pandan kreyasyon', es: 'Error al crear la oferta' },
+  appliesTo: { en: 'Applies To', fr: 'S\'applique à', ht: 'Aplike pou', es: 'Se aplica a' },
+  appliesToDesc: { en: 'Choose which products this deal applies to', fr: 'Choisissez les produits concernés', ht: 'Chwazi ki pwodui òf la aplike pou', es: 'Elija a qué productos se aplica' },
+  allProducts: { en: 'All Products', fr: 'Tous les produits', ht: 'Tout pwodui', es: 'Todos los productos' },
+  allProductsDesc: { en: 'Deal applies to your entire catalog', fr: 'L\'offre s\'applique à tout votre catalogue', ht: 'Òf la aplike pou tout katalòg ou', es: 'La oferta se aplica a todo su catálogo' },
+  specificProducts: { en: 'Specific Products', fr: 'Produits spécifiques', ht: 'Pwodui espesifik', es: 'Productos específicos' },
+  specificProductsDesc: { en: 'Select individual products', fr: 'Sélectionnez des produits individuels', ht: 'Chwazi pwodui endividyèl', es: 'Seleccione productos individuales' },
+  selectProductsError: { en: 'Please select at least one product', fr: 'Veuillez sélectionner au moins un produit', ht: 'Tanpri chwazi omwen yon pwodui', es: 'Por favor seleccione al menos un producto' },
 }
 
 const dealTypes = [
@@ -55,6 +63,7 @@ export default function NewDealPage() {
   const { t, language } = useLanguage()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([])
 
   const [formData, setFormData] = useState({
     title: '',
@@ -72,12 +81,20 @@ export default function NewDealPage() {
     is_featured: false,
     badge_text: '',
     badge_color: 'red',
+    applies_to: 'all_products' as 'all_products' | 'specific_products',
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
     setError(null)
+
+    // Validate product selection
+    if (formData.applies_to === 'specific_products' && selectedProductIds.length === 0) {
+      setError(t('selectProductsError', translations.selectProductsError))
+      setSaving(false)
+      return
+    }
 
     try {
       const supplierId = await getSupplierId()
@@ -104,14 +121,34 @@ export default function NewDealPage() {
         is_featured: formData.is_featured,
         badge_text: formData.badge_text || null,
         badge_color: formData.badge_color,
+        applies_to: formData.applies_to,
         approval_status: 'approved', // Auto-approve for now
       }
 
-      const { error: insertError } = await supabase
+      const { data: deal, error: insertError } = await supabase
         .from('marketplace_deals')
         .insert(dealData)
+        .select('id')
+        .single()
 
       if (insertError) throw insertError
+
+      // Insert deal products if specific products selected
+      if (formData.applies_to === 'specific_products' && selectedProductIds.length > 0 && deal) {
+        const dealProducts = selectedProductIds.map(productId => ({
+          deal_id: deal.id,
+          product_id: productId,
+        }))
+
+        const { error: productsError } = await supabase
+          .from('marketplace_deal_products')
+          .insert(dealProducts)
+
+        if (productsError) {
+          console.error('Error adding deal products:', productsError)
+          // Don't throw here - deal was created successfully
+        }
+      }
 
       router.push('/deals')
     } catch (err) {
@@ -197,6 +234,52 @@ export default function NewDealPage() {
               </select>
             </div>
           </div>
+        </div>
+
+        {/* Applies To Section */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">{t('appliesTo', translations.appliesTo)}</h2>
+          <p className="text-sm text-gray-500 mb-4">{t('appliesToDesc', translations.appliesToDesc)}</p>
+
+          <div className="space-y-3 mb-4">
+            <label className="flex items-start gap-3 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-primary-300 transition-colors has-[:checked]:border-primary-500 has-[:checked]:bg-primary-50">
+              <input
+                type="radio"
+                name="applies_to"
+                value="all_products"
+                checked={formData.applies_to === 'all_products'}
+                onChange={(e) => setFormData({ ...formData, applies_to: e.target.value as 'all_products' | 'specific_products' })}
+                className="mt-1 w-4 h-4 text-primary-600 focus:ring-primary-500"
+              />
+              <div>
+                <span className="font-medium text-gray-900">{t('allProducts', translations.allProducts)}</span>
+                <p className="text-sm text-gray-500">{t('allProductsDesc', translations.allProductsDesc)}</p>
+              </div>
+            </label>
+
+            <label className="flex items-start gap-3 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-primary-300 transition-colors has-[:checked]:border-primary-500 has-[:checked]:bg-primary-50">
+              <input
+                type="radio"
+                name="applies_to"
+                value="specific_products"
+                checked={formData.applies_to === 'specific_products'}
+                onChange={(e) => setFormData({ ...formData, applies_to: e.target.value as 'all_products' | 'specific_products' })}
+                className="mt-1 w-4 h-4 text-primary-600 focus:ring-primary-500"
+              />
+              <div>
+                <span className="font-medium text-gray-900">{t('specificProducts', translations.specificProducts)}</span>
+                <p className="text-sm text-gray-500">{t('specificProductsDesc', translations.specificProductsDesc)}</p>
+              </div>
+            </label>
+          </div>
+
+          {formData.applies_to === 'specific_products' && (
+            <ProductSelector
+              selectedProductIds={selectedProductIds}
+              onSelectionChange={setSelectedProductIds}
+              className="mt-4"
+            />
+          )}
         </div>
 
         {/* Discount Settings */}
